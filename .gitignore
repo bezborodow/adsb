@@ -1,2 +1,10 @@
 .*.swp
 .*.swo
+*.cache
+*.hw
+*.runs
+*.xpr
+*.log
+component.xml
+*.jou
+xgui
