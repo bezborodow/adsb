@@ -8,3 +8,10 @@
 component.xml
 *.jou
 xgui
+*.srcs
+*.sdk
+*.gen
+*.Xil
+*.mif
+*.ip_user_files
+*.str
