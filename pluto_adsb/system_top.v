@@ -108,7 +108,7 @@ module system_top (
 
   // instantiations
   strobe_gpio i_strobe (
-    .clk(clk),
+    .clk(rx_clk_in),
     .strobe(strobe)
   );
 
