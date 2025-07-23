@@ -24,6 +24,14 @@ set ad_hdl_dir $::env(ADI_HDL_DIR)
 open_project {../pluto/pluto.xpr}
 save_project_as pluto_adsb -force
 
+remove_files [get_files *system_top.v]
+add_files -fileset sources_1 -norecurse strobe_gpio.v
+add_files -fileset sources_1 -norecurse system_top.v
+import_files -force -norecurse
+update_compile_order -fileset sources_1
+set_property top system_top [current_fileset]
+get_files
+
 open_bd_design {pluto_adsb.srcs/sources_1/bd/system/system.bd}
 validate_bd_design
 save_bd_design
