@@ -19,14 +19,17 @@
 ----------------------------------------------------------------------------------
 
 
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use std.textio.all;
+library vunit_lib;
+context vunit_lib.vunit_context;
 
 
 entity schmitt_iq_tb is
 --  Port ( );
+    generic (runner_cfg : string);
 end schmitt_iq_tb;
 
 architecture test of schmitt_iq_tb is
@@ -56,11 +59,13 @@ begin
         clk => clk
     );
     
-    stimulus : process
-        file iq_file : text open read_mode is "C:/VivadoProjects/schmitt_trigger/schmitt_trigger.srcs/sim_1/new/iq_data.txt";
+    main : process
+        file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
         variable line_buf : line;
         variable line_i, line_q : integer;
     begin
+        test_runner_setup(runner, runner_cfg);
+        report "Hello world!";
         while not endfile(iq_file) loop
           readline(iq_file, line_buf);
           read(line_buf, line_i);
@@ -72,7 +77,7 @@ begin
           wait for clk_period;
         end loop;
         
+        test_runner_cleanup(runner); -- Simulation ends here
         wait;
-    end process;
-
+    end process main;
 end test;
