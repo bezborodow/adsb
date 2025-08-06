@@ -1,24 +1,3 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 21.04.2025 04:11:22
--- Design Name: 
--- Module Name: schmitt_iq_tb - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
-
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -27,24 +6,24 @@ library vunit_lib;
 context vunit_lib.vunit_context;
 
 
-entity schmitt_trigger_tb is
+entity preamble_detector_tb is
 --  port ( );
     generic (runner_cfg : string);
-end schmitt_trigger_tb;
+end preamble_detector_tb;
 
-architecture test of schmitt_trigger_tb is
-    component schmitt_trigger is
+architecture test of preamble_detector_tb is
+    component preamble_detector is
         port (
-            input_i : in std_logic_vector(11 downto 0);
-            input_q : in std_logic_vector(11 downto 0);
-            output : out std_logic;
+            input_i : in signed(11 downto 0);
+            input_q : in signed(11 downto 0);
+            detect : out std_logic;
             clk : in std_logic
        );
     end component;
     
-    signal input_i : std_logic_vector (11 downto 0) := (others => '0');
-    signal input_q : std_logic_vector (11 downto 0) := (others => '0');
-    signal output : std_logic := '0';
+    signal input_i : signed(11 downto 0) := (others => '0');
+    signal input_q : signed(11 downto 0) := (others => '0');
+    signal detect : std_logic := '0';
 
     signal clk: std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
@@ -52,10 +31,10 @@ architecture test of schmitt_trigger_tb is
 begin
     clk <= not clk after clk_period / 2;
     
-    uut: schmitt_trigger port map (
+    uut: preamble_detector port map (
         input_i => input_i,
         input_q => input_q,
-        output => output,
+        detect => detect,
         clk => clk
     );
     
@@ -71,8 +50,8 @@ begin
           read(line_buf, line_i);
           read(line_buf, line_q);
           
-          input_i <= std_logic_vector(to_signed(line_i, 12));
-          input_q <= std_logic_vector(to_signed(line_q, 12));
+          input_i <= to_signed(line_i, 12);
+          input_q <= to_signed(line_q, 12);
           
           wait for clk_period;
         end loop;

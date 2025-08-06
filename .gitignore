@@ -16,3 +16,4 @@ xgui
 *.ip_user_files
 *.str
 vunit_out
+*.ghw
