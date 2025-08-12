@@ -27,21 +27,24 @@ end preamble_detector;
 
 architecture Behavioral of preamble_detector is
     constant BUFFER_LENGTH : integer := SAMPLES_PER_SYMBOL * BUFFER_SYMBOL_LENGTH;
-
-    -- Q15 format threshold = 0.8 → 0.8 * 2^15 ≈ 26214
-    constant THRESHOLD_Q15 : integer := 26214;
-
+    constant CORRELATION_WIDTH : integer := (IQ_WIDTH*2) + integer(ceil(log2(real(BUFFER_LENGTH))));
 
     type iq_buffer_t is array (natural range <>) of unsigned(IQ_WIDTH*2 downto 0);
     signal shift_reg : iq_buffer_t(0 to BUFFER_LENGTH-1) := (others => (others => '0'));
 
-    signal correlation : signed((IQ_WIDTH*2)+integer(ceil(log2(real(BUFFER_LENGTH))))-1 downto 0) := (others => '0');
+    signal correlation : signed(CORRELATION_WIDTH-1 downto 0) := (others => '0');
+    --signal correlation_sq : unsigned(2*CORRELATION_WIDTH-1 downto 0) := (others => '0');
+    --signal normalised_threshold : unsigned(CORRELATION_WIDTH-1 downto 0) := (others => '0');
+    signal energy : signed(CORRELATION_WIDTH-1 downto 0) := (others => '0');
 begin
     trigger_process : process(clk)
         variable input_i_sq : signed(IQ_WIDTH*2-1 downto 0);
         variable input_q_sq : signed(IQ_WIDTH*2-1 downto 0);
         variable magnitude_sq : unsigned(IQ_WIDTH*2 downto 0);
-        variable sum : signed((IQ_WIDTH*2)+integer(ceil(log2(real(BUFFER_LENGTH))))-1 downto 0);
+        variable sum : signed(CORRELATION_WIDTH-1 downto 0);
+        variable sum_energy : signed(CORRELATION_WIDTH-1 downto 0);
+
+        constant THRESHOLD_SCALE : unsigned(CORRELATION_WIDTH-1 downto 0) := to_unsigned(1000000000, CORRELATION_WIDTH);
     begin
         if (rising_edge(clk)) then
             input_i_sq := input_i * input_i;
@@ -54,23 +57,25 @@ begin
             end loop;
 
             sum := (others => '0');
+            sum_energy := (others => '0');
             for i in 0 to BUFFER_LENGTH-1 loop
                 if p(i) = to_signed(1, 2) then
                     sum := sum + signed(resize(shift_reg(BUFFER_LENGTH-i-1), sum'length));
                 elsif p(i) = to_signed(-1, 2) then
                     sum := sum - signed(resize(shift_reg(BUFFER_LENGTH-i-1), sum'length));
                 end if;
+                sum_energy := sum_energy + signed(resize(shift_reg(BUFFER_LENGTH-i-1), sum_energy'length));
             end loop;
             correlation <= sum;
+            energy <= sum_energy;
         end if;
 
-        -- multiply both correlation and energy by scaling factor before comparing
-        --detect <= '1' when (correlation > to_signed(THRESHOLD_Q15, corr'length) * signed(energy)) else '0';
-        detect <= '1' when (correlation > to_signed(THRESHOLD_Q15, correlation'length)) else '0';
+        --correlation_sq <= unsigned(correlation) * unsigned(correlation);
+        --normalised_threshold <= sum_energy * THRESHOLD_SCALE;
+
+        detect <= '1' when (correlation > (energy * 3) srl 2) else '0';
 
     end process trigger_process;
 
-
-    --C <= C + resize(x, C'length) * resize(p(sample_idx), C'length);
 end Behavioral;
 
