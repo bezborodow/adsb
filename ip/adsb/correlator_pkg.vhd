@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 package correlator_pkg is
   -- your generic-controlled pattern and samples-per-symbol
   constant PREAMBLE_PATTERN   : std_logic_vector := "1010000101000000";
-  constant SAMPLES_PER_SYMBOL : integer          := 4;
+  constant SAMPLES_PER_SYMBOL : integer          := 10;
 
   -- element type: signed 2-bit (can represent –1, 0, +1)
   subtype sample_t is signed(1 downto 0);
@@ -41,7 +41,7 @@ package body correlator_pkg is
         if pattern(i) = '1' then
           result(idx) := to_signed(1, 2);
         else
-          result(idx) := to_signed(-1,2);
+          result(idx) := to_signed(-1, 2);
         end if;
         idx := idx + 1;
       end loop;

@@ -5,7 +5,6 @@ use std.textio.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
 
-
 entity preamble_detector_tb is
 --  port ( );
     generic (runner_cfg : string);
@@ -27,7 +26,7 @@ architecture test of preamble_detector_tb is
 
     signal clk: std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
-    
+
 begin
     clk <= not clk after clk_period / 2;
     
