@@ -3,10 +3,12 @@
 
 M_DIR := $(shell pwd)
 
-export ADI_HDL_DIR := $(M_DIR)/../../hdl
-export ADI_PHDL_DIR := $(M_DIR)../../hdl
+export ADI_HDL_DIR := $(M_DIR)/../../../hdl
+#export ADI_PHDL_DIR := $(M_DIR)/../../../hdl
+export ADI_IGNORE_VERSION_CHECK := 1
 
 M_DEPS += $(ADI_HDL_DIR)/library/scripts/adi_env.tcl
+#M_DEPS += $(ADI_HDL_DIR)/library/scripts/adi_ip_xilinx.tcl
 M_DEPS += $(ADI_HDL_DIR)/library/scripts/adi_ip.tcl
 M_DEPS += $(ADI_HDL_DIR)/library/common/ad_mem.v
 M_DEPS += $(ADI_HDL_DIR)/library/common/ad_rst.v
@@ -41,7 +43,7 @@ clean-all:
 
 axi_xcomm2ip.xpr: $(M_DEPS)
 	rm -rf $(M_FLIST)
-	$(M_VIVADO) axi_xcomm2ip_ip.tcl  >> axi_xcomm2ip_ip.log 2>&1
+	$(M_VIVADO) axi_xcomm2ip_ip.tcl | tee axi_xcomm2ip_ip.log 2>&1
 
 ####################################################################################
 ####################################################################################

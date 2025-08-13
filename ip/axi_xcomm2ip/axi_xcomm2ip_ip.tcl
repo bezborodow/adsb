@@ -1,9 +1,13 @@
 # ip
 
+set IGNORE_VERSION_CHECK $::env(ADI_IGNORE_VERSION_CHECK)
+set required_vivado_version 2024.2
+
 set ad_hdl_dir $::env(ADI_HDL_DIR)
 set ad_phdl_dir $::env(ADI_HDL_DIR)
 
 source $ad_hdl_dir/library/scripts/adi_ip.tcl
+#source $ad_hdl_dir/library/scripts/adi_ip_xilinx.tcl
 
 adi_ip_create axi_xcomm2ip
 adi_ip_files axi_xcomm2ip [list \
