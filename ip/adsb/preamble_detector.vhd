@@ -44,6 +44,8 @@ architecture Behavioral of preamble_detector is
     --signal correlation_sq : unsigned(2*CORRELATION_WIDTH-1 downto 0) := (others => '0');
     --signal normalised_threshold : unsigned(CORRELATION_WIDTH-1 downto 0) := (others => '0');
     signal energy : unsigned(CORRELATION_WIDTH-1 downto 0) := (others => '0');
+
+    type unsigned_hist_5_t is array (0 to 4) of unsigned(CORRELATION_WIDTH-1 downto 0);
 begin
     trigger_process : process(clk)
         variable input_i_sq : signed(IQ_WIDTH*2-1 downto 0);
@@ -97,11 +99,13 @@ begin
     detect_process : process(clk)
         variable all_thresholds_ok : boolean := false;
         variable threshold : unsigned(energy'length-1 downto 0);
-        --variable energy_u : unsigned(sym_energy(0)'length-1 downto 0);
+        variable local_detect : boolean := false;
+        --variable energy_history : array(0 to 4) of unsigned(CORRELATION_WIDTH-1 downto 0) := (others => (others => '0'));
+        variable energy_history : unsigned_hist_5_t;
     begin
         threshold := resize((energy * to_unsigned(3, energy'length+2)) srl 4, energy'length);
 
-        if (rising_edge(clk)) then
+        if rising_edge(clk) then
             all_thresholds_ok := true;
             for i in PREAMBLE_POS'range loop
                 if resize(sym_energy(i), energy'length) <= threshold then
@@ -109,7 +113,30 @@ begin
                 end if;
             end loop;
 
-            detect <= '1' when all_thresholds_ok else '0';
+            local_detect := true when all_thresholds_ok else false;
+
+            energy_history(4) := energy_history(3);
+            energy_history(3) := energy_history(2);
+            energy_history(2) := energy_history(1);
+            energy_history(1) := energy_history(0);
+            if local_detect then
+                energy_history(0) := energy;
+            else
+                energy_history(0) := (others => '0');
+            end if;
+
+            if energy_history(2) > 0 then
+                if (energy_history(2) > energy_history(0)) and
+                   (energy_history(2) > energy_history(1)) and
+                   (energy_history(2) > energy_history(3)) and
+                   (energy_history(2) > energy_history(4)) then
+                    detect <= '1';
+                else
+                    detect <= '0';
+                end if;
+            else
+                detect <= '0';
+            end if;
         end if;
     end process detect_process;
 
