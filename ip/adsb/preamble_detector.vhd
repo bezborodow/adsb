@@ -18,10 +18,15 @@ entity preamble_detector is
         IQ_WIDTH : integer := 12
     );
     port (
+        clk : in std_logic;
         input_i : in signed(IQ_WIDTH-1 downto 0);
         input_q : in signed(IQ_WIDTH-1 downto 0);
         detect : out std_logic;
-        clk : in std_logic
+        high_threshold : out unsigned(IQ_WIDTH*2 downto 0);
+        low_threshold : out unsigned(IQ_WIDTH*2 downto 0);
+        passthru_magnitude_sq : out unsigned(IQ_WIDTH*2 downto 0);
+        passthru_i : out unsigned(IQ_WIDTH-1 downto 0);
+        passthru_q : out unsigned(IQ_WIDTH-1 downto 0)
     );
 end preamble_detector;
 
@@ -41,11 +46,32 @@ architecture Behavioral of preamble_detector is
     signal shift_reg : iq_buffer_t(0 to BUFFER_LENGTH-1) := (others => (others => '0'));
 
     signal correlation : signed(CORRELATION_WIDTH-1 downto 0) := (others => '0');
-    --signal correlation_sq : unsigned(2*CORRELATION_WIDTH-1 downto 0) := (others => '0');
-    --signal normalised_threshold : unsigned(CORRELATION_WIDTH-1 downto 0) := (others => '0');
     signal energy : unsigned(CORRELATION_WIDTH-1 downto 0) := (others => '0');
 
     type unsigned_hist_5_t is array (0 to 4) of unsigned(CORRELATION_WIDTH-1 downto 0);
+
+    function max_over_preamble(sr : iq_buffer_t) return unsigned is
+        variable m       : unsigned(IQ_WIDTH*2 downto 0) := (others => '0');
+        variable s       : unsigned(IQ_WIDTH*2 downto 0);
+        variable idx_sym : integer;
+    begin
+        for i in 0 to PREAMBLE_POS'length-1 loop
+            for ii in 0 to SAMPLES_PER_SYMBOL-1 loop
+                idx_sym := PREAMBLE_POS(i) * SAMPLES_PER_SYMBOL + ii;
+                if idx_sym >= sr'low and idx_sym <= sr'high then
+                    s := resize(sr(idx_sym), m'length);
+                    if s > m then
+                        m := s;
+                    end if;
+                else
+                    report "max_over_preamble: idx_sym out of range" severity warning;
+                end if;
+            end loop;
+        end loop;
+
+        return m;
+    end function;
+
 begin
     trigger_process : process(clk)
         variable input_i_sq : signed(IQ_WIDTH*2-1 downto 0);
@@ -100,8 +126,8 @@ begin
         variable all_thresholds_ok : boolean := false;
         variable threshold : unsigned(energy'length-1 downto 0);
         variable local_detect : boolean := false;
-        --variable energy_history : array(0 to 4) of unsigned(CORRELATION_WIDTH-1 downto 0) := (others => (others => '0'));
         variable energy_history : unsigned_hist_5_t;
+        variable max_magnitude : unsigned(IQ_WIDTH*2 downto 0);
     begin
         threshold := resize((energy * to_unsigned(3, energy'length+2)) srl 4, energy'length);
 
@@ -131,6 +157,9 @@ begin
                    (energy_history(2) > energy_history(3)) and
                    (energy_history(2) > energy_history(4)) then
                     detect <= '1';
+                    max_magnitude := max_over_preamble(shift_reg);
+                    high_threshold <= max_magnitude srl 1;
+                    low_threshold <= max_magnitude srl 3;
                 else
                     detect <= '0';
                 end if;

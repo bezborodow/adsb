@@ -35,15 +35,16 @@ end schmitt_trigger_tb;
 architecture test of schmitt_trigger_tb is
     component schmitt_trigger is
         port (
-            input_i : in std_logic_vector(11 downto 0);
-            input_q : in std_logic_vector(11 downto 0);
+            magnitude_sq : in unsigned(24 downto 0);
             output : out std_logic;
-            clk : in std_logic
+            high_threshold : in unsigned(24 downto 0);
+            low_threshold : in unsigned(24 downto 0);
+            clk : in std_logic;
+            ce : in std_logic
        );
     end component;
     
-    signal input_i : std_logic_vector (11 downto 0) := (others => '0');
-    signal input_q : std_logic_vector (11 downto 0) := (others => '0');
+    signal magnitude_sq : unsigned(24 downto 0) := (others => '0');
     signal output : std_logic := '0';
 
     signal clk: std_logic := '1';
@@ -53,9 +54,11 @@ begin
     clk <= not clk after clk_period / 2;
     
     uut: schmitt_trigger port map (
-        input_i => input_i,
-        input_q => input_q,
+        magnitude_sq => magnitude_sq,
         output => output,
+        high_threshold => to_unsigned(500000, 25),
+        low_threshold => to_unsigned(50000, 25),
+        ce => '1',
         clk => clk
     );
     
@@ -63,6 +66,8 @@ begin
         file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
         variable line_buf : line;
         variable line_i, line_q : integer;
+        variable input_i : signed(11 downto 0) := (others => '0');
+        variable input_q : signed(11 downto 0) := (others => '0');
     begin
         test_runner_setup(runner, runner_cfg);
         report "Hello world!";
@@ -71,8 +76,13 @@ begin
           read(line_buf, line_i);
           read(line_buf, line_q);
           
-          input_i <= std_logic_vector(to_signed(line_i, 12));
-          input_q <= std_logic_vector(to_signed(line_q, 12));
+          input_i := to_signed(line_i, 12);
+          input_q := to_signed(line_q, 12);
+          magnitude_sq <= to_unsigned(
+                  to_integer(input_i) * to_integer(input_i)
+                + to_integer(input_q) * to_integer(input_q),
+                magnitude_sq'length);
+
           
           wait for clk_period;
         end loop;
