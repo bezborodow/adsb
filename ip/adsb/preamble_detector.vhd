@@ -50,6 +50,9 @@ architecture Behavioral of preamble_detector is
 
     type unsigned_hist_5_t is array (0 to 4) of unsigned(CORRELATION_WIDTH-1 downto 0);
 
+    signal high_threshold_latch : unsigned(IQ_WIDTH*2 downto 0) := (others => '0');
+    signal low_threshold_latch : unsigned(IQ_WIDTH*2 downto 0) := (others => '0');
+
     function max_over_preamble(sr : iq_buffer_t) return unsigned is
         variable m       : unsigned(IQ_WIDTH*2 downto 0) := (others => '0');
         variable s       : unsigned(IQ_WIDTH*2 downto 0);
@@ -73,6 +76,9 @@ architecture Behavioral of preamble_detector is
     end function;
 
 begin
+    high_threshold <= high_threshold_latch;
+    low_threshold <= low_threshold_latch;
+
     trigger_process : process(clk)
         variable input_i_sq : signed(IQ_WIDTH*2-1 downto 0);
         variable input_q_sq : signed(IQ_WIDTH*2-1 downto 0);
@@ -158,8 +164,8 @@ begin
                    (energy_history(2) > energy_history(4)) then
                     detect <= '1';
                     max_magnitude := max_over_preamble(shift_reg);
-                    high_threshold <= max_magnitude srl 1;
-                    low_threshold <= max_magnitude srl 3;
+                    high_threshold_latch <= max_magnitude srl 1;
+                    low_threshold_latch <= max_magnitude srl 3;
                 else
                     detect <= '0';
                 end if;
