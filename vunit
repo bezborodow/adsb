@@ -25,5 +25,9 @@ lib.add_source_files("tb/preamble_detector/*.vhd")
 tb = lib.test_bench("preamble_detector_tb")
 tb.set_sim_option("ghdl.sim_flags", ["--wave=preamble_detector_tb.ghw"])
 
+lib.add_source_files("tb/adsb/*.vhd")
+tb = lib.test_bench("adsb_tb")
+tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_tb.ghw"])
+
 # Run vunit function
 vu.main()

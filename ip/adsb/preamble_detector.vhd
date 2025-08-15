@@ -31,10 +31,14 @@ entity preamble_detector is
 end preamble_detector;
 
 architecture Behavioral of preamble_detector is
+    -- How many samples the IQ stream is delayed by compared to when the preamble is detected.
+    constant DELAY_SAMPLES : integer := 6;
+
     constant BUFFER_LENGTH : integer := SAMPLES_PER_SYMBOL * BUFFER_SYMBOL_LENGTH;
     constant CORRELATION_WIDTH : integer := (IQ_WIDTH*2) + integer(ceil(log2(real(BUFFER_LENGTH))));
 
     -- Where each pulse in the preamble starts.
+    -- There are four pulses in the preamble of an ADS-B message.
     constant PREAMBLE_POS : integer_vector := (0, 2, 7, 9);
 
     -- Energy in each pulse window.
@@ -135,9 +139,8 @@ begin
         variable energy_history : unsigned_hist_5_t;
         variable max_magnitude : unsigned(IQ_WIDTH*2 downto 0);
     begin
-        threshold := resize((energy * to_unsigned(3, energy'length+2)) srl 4, energy'length);
-
         if rising_edge(clk) then
+            threshold := resize((energy * to_unsigned(3, energy'length+2)) srl 4, energy'length);
             all_thresholds_ok := true;
             for i in PREAMBLE_POS'range loop
                 if resize(sym_energy(i), energy'length) <= threshold then
