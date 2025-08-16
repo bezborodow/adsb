@@ -29,5 +29,9 @@ lib.add_source_files("tb/adsb/*.vhd")
 tb = lib.test_bench("adsb_tb")
 tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_tb.ghw"])
 
+lib.add_source_files("tb/ppm_demod/*.vhd")
+tb = lib.test_bench("ppm_demod_tb")
+tb.set_sim_option("ghdl.sim_flags", ["--wave=ppm_demod_tb.ghw"])
+
 # Run vunit function
 vu.main()

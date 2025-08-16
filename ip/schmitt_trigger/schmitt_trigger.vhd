@@ -25,7 +25,7 @@ use ieee.numeric_std.all;
 
 entity schmitt_trigger is
     port (
-        magnitude_sq : in unsigned(24 downto 0);
+        magnitude_sq : in unsigned(24 downto 0) := (others => '0');
         high_threshold : in unsigned(24 downto 0) := (others => '0');
         low_threshold : in unsigned(24 downto 0) := (others => '0');
         output : out std_logic;

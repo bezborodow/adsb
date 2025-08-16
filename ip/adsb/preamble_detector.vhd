@@ -94,7 +94,7 @@ begin
 
         constant THRESHOLD_SCALE : unsigned(CORRELATION_WIDTH-1 downto 0) := to_unsigned(1000000000, CORRELATION_WIDTH);
     begin
-        if (rising_edge(clk)) then
+        if rising_edge(clk) then
             input_i_sq := input_i * input_i;
             input_q_sq := input_q * input_q;
             magnitude_sq := resize(unsigned(input_i_sq), magnitude_sq'length) + resize(unsigned(input_q_sq), magnitude_sq'length);

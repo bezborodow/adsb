@@ -47,7 +47,7 @@ architecture test of schmitt_trigger_tb is
     signal magnitude_sq : unsigned(24 downto 0) := (others => '0');
     signal output : std_logic := '0';
 
-    signal clk: std_logic := '1';
+    signal clk : std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
     
 begin
