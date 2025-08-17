@@ -108,6 +108,7 @@ begin
             wait for clk_period;
             assert valid = '0';
             assert unsigned(data) = 0;
+            assert w56 = '0';
             wait for clk_period * 50;
         end if;
         if run("56bit") then
@@ -124,6 +125,7 @@ begin
             wait for clk_period;
             assert valid = '0';
             assert unsigned(data) = 0;
+            assert w56 = '0';
             wait for clk_period * 50;
         end if;
 

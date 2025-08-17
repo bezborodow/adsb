@@ -99,7 +99,7 @@ begin
                         do_sample := true;
                     end if;
                     if edge_timer = HALF_SPS*5-1 then
-                        if index = 56 then
+                        if index = 56 and input_z1 = '0' then
                             valid_r <= '1';
                             w56_r <= '1';
                         else
@@ -138,6 +138,7 @@ begin
             if ce = '1' and valid_r = '1' and ready = '1' then
                 valid_r <= '0';
                 data_r <= (others => '0');
+                w56_r <= '0';
             end if;
         end if;
 
