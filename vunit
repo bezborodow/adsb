@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 from vunit import VUnit
+from pathlib import Path
 
 # Create VUnit instance by parsing command line arguments
-vu = VUnit.from_argv()
-
-# Optionally add VUnit's builtin HDL utilities for checking, logging, communication...
-# See http://vunit.github.io/hdl_libraries.html.
+vu = VUnit.from_argv(compile_builtins=False)
 vu.add_vhdl_builtins()
-# or
-# vu.add_verilog_builtins()
 
 # Create library 'lib'
 lib = vu.add_library("lib")
@@ -31,7 +27,24 @@ tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_tb.ghw"])
 
 lib.add_source_files("tb/ppm_demod/*.vhd")
 tb = lib.test_bench("ppm_demod_tb")
-tb.set_sim_option("ghdl.sim_flags", ["--wave=ppm_demod_tb.ghw"])
+# robustly obtain VUnit output path (handle different VUnit versions)
+out_path = Path(getattr(vu, "output_path", None) or getattr(vu, "_output_path", Path(".")))
+
+# get the list of testcase objects (try a few common APIs)
+try:
+    tests = tb.get_test_cases()   # newer API
+except AttributeError:
+    try:
+        tests = tb.get_tests()    # older API
+    except AttributeError:
+        tests = getattr(tb, "test_cases", [])  # last fallback (may be empty)
+
+for tc in tests:
+    # obtain a usable testcase name (handle .name or .get_name())
+    tc_name = getattr(tc, "name", None) or (tc.get_name() if hasattr(tc, "get_name") else str(tc))
+    wavefile = str(out_path / f"{tb.name}.{tc_name}.ghw")
+    tc.set_sim_option("ghdl.sim_flags", [f"--wave={wavefile}"])
+
 
 # Run vunit function
 vu.main()
