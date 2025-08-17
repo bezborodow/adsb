@@ -20,21 +20,24 @@ entity ppm_demod is
         data : out std_logic_vector(111 downto 0)
     );
 end ppm_demod;
-
 architecture Behavioral of ppm_demod is
     constant HALF_SPS : integer := SAMPLES_PER_SYMBOL / 2;
     signal edge_timer : unsigned(15 downto 0) := (others => '0');
     signal input_z1 : std_logic := '0';
     signal start_demod : std_logic := '0';
-    signal input_rising : std_logic := '0';
-    signal input_falling : std_logic := '0';
-    signal symbol : std_logic_vector(1 downto 0) := "00";
+    --signal symbol : std_logic_vector(1 downto 0) := "00";
     signal data_reg : std_logic_vector(111 downto 0) := (others => '0');
+    signal malformed_reg : std_logic := '0';
+    signal valid_reg : std_logic := '0';
 begin
 
     data <= data_reg;
+    malformed <= malformed_reg;
+    valid <= valid_reg;
 
     timing_process : process(clk)
+        variable input_rising : std_logic := '0';
+        variable input_falling : std_logic := '0';
     begin
         if rising_edge(clk) then
             if ce then
@@ -44,14 +47,14 @@ begin
                 else
                     start_demod <= '0';
                     if input = '0' and input_z1 = '1' then
-                        input_rising <= '1';
+                        input_rising := '1';
                     else
-                        input_rising <= '0';
+                        input_rising := '0';
                     end if;
                     if input = '1' and input_z1 = '0' then
-                        input_falling <= '1';
+                        input_falling := '1';
                     else
-                        input_falling <= '0';
+                        input_falling := '0';
                     end if;
 
                     if input_rising or input_falling then
@@ -66,21 +69,62 @@ begin
     end process timing_process;
 
     demod_process : process(clk)
-        variable idx : unsigned (6 downto 0) := (others => '0');
-        variable pulse_position : std_logic := '0';
+        variable index : unsigned(6 downto 0) := (others => '0');
+        variable pulse_position : unsigned(0 downto 0) := "0";
+        variable symbol : std_logic_vector(1 downto 0) := "00";
+        variable do_sample : boolean := false;
+        variable sample : std_logic := '0';
+        variable invalid_symbol : boolean := false;
     begin
         if rising_edge(clk) then
-            if start_demod = '1' then
-                pulse_position := '0';
+            if ce = '1' and valid_reg = '0' then
+                if start_demod = '1' then
+                    pulse_position := "1";
+                    index := (others => '0');
+                    malformed_reg <= '0';
+                    valid_reg <= '0';
+                    data_reg <= (others => '0');
+                elsif malformed_reg = '0' then
+                    do_sample := false;
+                    if edge_timer = HALF_SPS-1 then
+                        pulse_position := not pulse_position;
+                        do_sample := true;
+                    end if;
+                    if edge_timer = HALF_SPS*3-1 then
+                        pulse_position := not pulse_position;
+                        do_sample := true;
+                    end if;
+                    if edge_timer = HALF_SPS*5-1 then
+                        malformed_reg <= '1';
+                    end if;
+
+                    if do_sample then
+                        symbol(to_integer(pulse_position)) := input_z1;
+                        if pulse_position = "1" and to_integer(index) < 112 then
+                            invalid_symbol := false;
+                            if symbol = "01" then
+                                sample := '1';
+                            elsif symbol = "10" then
+                                sample := '0';
+                            else
+                                malformed_reg <= '1';
+                                invalid_symbol := true;
+                            end if;
+                            if not invalid_symbol then
+                                data_reg(to_integer(index)) <= sample;
+                                index := index + 1;
+                                if index = 112 then
+                                    valid_reg <= '1';
+                                end if;
+                            end if;
+                        end if;
+                    end if;
+                end if;
             end if;
-            if edge_timer = HALF_SPS-1 then
-                pulse_position := not pulse_position;
-            end if;
-            if edge_timer = HALF_SPS*3-1 then
-                pulse_position := not pulse_position;
-            end if;
-            if edge_timer = HALF_SPS*5-1 then
-                -- TODO
+
+            if ce = '1' and valid_reg = '1' and ready = '1' then
+                valid_reg <= '0';
+                data_reg <= (others => '0');
             end if;
         end if;
 

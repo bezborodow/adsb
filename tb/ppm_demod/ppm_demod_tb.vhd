@@ -32,6 +32,8 @@ architecture test of ppm_demod_tb is
     signal ready : std_logic := '0';
     signal detect : std_logic := '1';
     signal input : std_logic := '0';
+    signal valid : std_logic := '0';
+    signal data : std_logic_vector(111 downto 0) := (others => '0');
 
 begin
     clk <= not clk after clk_period / 2;
@@ -41,7 +43,9 @@ begin
         clk => clk,
         ready => ready,
         input => input,
-        detect => detect
+        detect => detect,
+        valid => valid,
+        data => data
     );
 
     main : process
@@ -77,6 +81,17 @@ begin
             input <= '0';
             wait for clk_period * 10;
         end loop;
+
+        wait for clk_period * 50;
+        assert valid = '1';
+        assert data = "1001100110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011001" report "Data not as expected.";
+        ready <= '1';
+        wait for clk_period;
+        assert valid = '1';
+        ready <= '0';
+        wait for clk_period;
+        assert valid = '0';
+        wait for clk_period * 50;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
