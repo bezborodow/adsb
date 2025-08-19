@@ -57,10 +57,10 @@ begin
     begin
         if rising_edge(clk) then
             if (gate_i = '1') and (gate_z1 = '1') then
-                phasor_im := resize(i_i * q_z1 - q_i * i_z1, phasor_im'length);
                 phasor_re := resize(i_i * i_z1 + q_i * q_z1, phasor_re'length);
+                phasor_im := resize(i_i * q_z1 - q_i * i_z1, phasor_im'length);
                 accumulator_re <= accumulator_re + resize(phasor_re, accumulator_re'length);
-                accumulator_im <= accumulator_im + resize(phasor_re, accumulator_re'length);
+                accumulator_im <= accumulator_im + resize(phasor_im, accumulator_im'length);
             end if;
             vld <= not vld;
         end if;
