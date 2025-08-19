@@ -1,40 +1,23 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 21.04.2025 01:49:26
--- Design Name: 
--- Module Name: schmitt_trigger - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
-
-
+-- Schmitt Trigger
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity schmitt_trigger is
+    generic (
+        SIGNAL_WIDTH : integer := 25
+    );
     port (
-        magnitude_sq : in unsigned(24 downto 0) := (others => '0');
-        high_threshold : in unsigned(24 downto 0) := (others => '0');
-        low_threshold : in unsigned(24 downto 0) := (others => '0');
+        magnitude_sq : in unsigned(SIGNAL_WIDTH-1 downto 0) := (others => '0');
+        high_threshold : in unsigned(SIGNAL_WIDTH-1 downto 0) := (others => '0');
+        low_threshold : in unsigned(SIGNAL_WIDTH-1 downto 0) := (others => '0');
         output : out std_logic;
         ce : in std_logic := '0'; -- Clock enable.
         clk : in std_logic
     );
 end schmitt_trigger;
 
-architecture Behavioral of schmitt_trigger is
+architecture rtl of schmitt_trigger is
 begin
     trigger_process : process(clk)
     begin
@@ -50,5 +33,4 @@ begin
             end if;
         end if;
     end process trigger_process;
-end Behavioral;
-
+end rtl;
