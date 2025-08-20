@@ -180,5 +180,12 @@ begin
         end if;
     end process detect_process;
 
+    delay_process : process(clk)
+    begin
+        if rising_edge(clk) then
+            mag_sq_o <= shift_reg(BUFFER_LENGTH-5);
+        end if;
+    end process delay_process;
+
 end Behavioral;
 

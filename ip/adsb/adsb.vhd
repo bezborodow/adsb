@@ -50,7 +50,8 @@ begin
         low_threshold_o => low_threshold,
 
         i_o => detector_i,
-        q_o => detector_q
+        q_o => detector_q,
+        mag_sq_o => magnitude_sq
     );
     
     trigger: entity work.schmitt_trigger
