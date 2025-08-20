@@ -181,6 +181,8 @@ begin
     end process detect_process;
 
     -- Passthrough signals delayed against the pipeline delay.
+    -- These signals are useful for keeping everything synchronised, since
+    -- preamble detection introduces delay.
     delay_process : process(clk)
         constant PIPELINE_DELAY : integer := 4;
     begin
