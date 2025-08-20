@@ -1,24 +1,3 @@
-----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
--- 
--- Create Date: 21.04.2025 04:11:22
--- Design Name: 
--- Module Name: schmitt_iq_tb - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
--- Description: 
--- 
--- Dependencies: 
--- 
--- Revision:
--- Revision 0.01 - File Created
--- Additional Comments:
--- 
-----------------------------------------------------------------------------------
-
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -43,11 +22,11 @@ begin
     clk <= not clk after clk_period / 2;
 
     uut: entity work.schmitt_trigger port map (
-        magnitude_sq => magnitude_sq,
-        output => output,
+        schmitt_i => magnitude_sq,
+        schmitt_o => output,
         high_threshold_i => to_unsigned(500000, 25),
         low_threshold_i => to_unsigned(50000, 25),
-        ce => '1',
+        ce_i => '1',
         clk => clk
     );
 

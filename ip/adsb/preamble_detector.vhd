@@ -27,8 +27,8 @@ entity preamble_detector is
         mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
         high_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
         low_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        i_o : out unsigned(IQ_WIDTH-1 downto 0);
-        q_o : out unsigned(IQ_WIDTH-1 downto 0)
+        i_o : out signed(IQ_WIDTH-1 downto 0);
+        q_o : out signed(IQ_WIDTH-1 downto 0)
     );
 end preamble_detector;
 
