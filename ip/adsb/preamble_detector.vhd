@@ -180,10 +180,12 @@ begin
         end if;
     end process detect_process;
 
+    -- Passthrough signals delayed against the pipeline delay.
     delay_process : process(clk)
+        constant PIPELINE_DELAY : integer := 4;
     begin
         if rising_edge(clk) then
-            mag_sq_o <= shift_reg(BUFFER_LENGTH-5);
+            mag_sq_o <= shift_reg(BUFFER_LENGTH - PIPELINE_DELAY - 1);
         end if;
     end process delay_process;
 
