@@ -19,9 +19,9 @@ entity preamble_detector is
     );
     port (
         clk : in std_logic;
-        input_i : in signed(IQ_WIDTH-1 downto 0);
-        input_q : in signed(IQ_WIDTH-1 downto 0);
-        detect : out std_logic := '0';
+        i_i : in signed(IQ_WIDTH-1 downto 0);
+        q_i : in signed(IQ_WIDTH-1 downto 0);
+        detect_o : out std_logic := '0';
         high_threshold : out unsigned(IQ_WIDTH*2 downto 0);
         low_threshold : out unsigned(IQ_WIDTH*2 downto 0);
         passthru_magnitude_sq : out unsigned(IQ_WIDTH*2 downto 0);
@@ -95,8 +95,8 @@ begin
         constant THRESHOLD_SCALE : unsigned(CORRELATION_WIDTH-1 downto 0) := to_unsigned(1000000000, CORRELATION_WIDTH);
     begin
         if rising_edge(clk) then
-            input_i_sq := input_i * input_i;
-            input_q_sq := input_q * input_q;
+            input_i_sq := i_i * i_i;
+            input_q_sq := q_i * q_i;
             magnitude_sq := resize(unsigned(input_i_sq), magnitude_sq'length) + resize(unsigned(input_q_sq), magnitude_sq'length);
 
             -- Append most recently arrived sample onto the end of the shift register.
@@ -165,15 +165,15 @@ begin
                    (energy_history(2) > energy_history(1)) and
                    (energy_history(2) > energy_history(3)) and
                    (energy_history(2) > energy_history(4)) then
-                    detect <= '1';
+                    detect_o <= '1';
                     max_magnitude := max_over_preamble(shift_reg);
                     high_threshold_r <= max_magnitude srl 1;
                     low_threshold_r <= max_magnitude srl 3;
                 else
-                    detect <= '0';
+                    detect_o <= '0';
                 end if;
             else
-                detect <= '0';
+                detect_o <= '0';
             end if;
         end if;
     end process detect_process;

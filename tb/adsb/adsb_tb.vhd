@@ -13,8 +13,8 @@ end adsb_tb;
 architecture test of adsb_tb is
     component adsb is
         port (
-            input_i : in signed(11 downto 0);
-            input_q : in signed(11 downto 0);
+            i_i : in signed(11 downto 0);
+            q_i : in signed(11 downto 0);
             clk : in std_logic
        );
     end component;
@@ -29,8 +29,8 @@ begin
     clk <= not clk after clk_period / 2;
 
     uut: adsb port map (
-        input_i => input_i,
-        input_q => input_q,
+        i_i => input_i,
+        q_i => input_q,
         clk => clk
     );
     

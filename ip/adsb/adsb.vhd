@@ -16,28 +16,29 @@ entity adsb is
     );
     port (
         clk : in std_logic;
-        input_i : in signed(IQ_WIDTH-1 downto 0);
-        input_q : in signed(IQ_WIDTH-1 downto 0)
+        i_i : in signed(IQ_WIDTH-1 downto 0);
+        q_i : in signed(IQ_WIDTH-1 downto 0)
     );
 end adsb;
 
 architecture Behavioral of adsb is
+    constant MAGNITUDE_WIDTH : integer := IQ_WIDTH * 2 + 1;
     component preamble_detector is
         port (
-            input_i : in signed(11 downto 0);
-            input_q : in signed(11 downto 0);
-            high_threshold : out unsigned(24 downto 0);
-            low_threshold : out unsigned(24 downto 0);
-            detect : out std_logic;
+            i_i : in signed(IQ_WIDTH-1 downto 0);
+            q_i : in signed(IQ_WIDTH-1 downto 0);
+            high_threshold : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+            low_threshold : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+            detect_o : out std_logic;
             clk : in std_logic
        );
     end component;
 
     component schmitt_trigger is
         port (
-            magnitude_sq : in unsigned(24 downto 0);
-            high_threshold : in unsigned(24 downto 0);
-            low_threshold : in unsigned(24 downto 0);
+            magnitude_sq : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
+            high_threshold : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
+            low_threshold : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
             output : out std_logic;
             ce : in std_logic := '0'; -- Clock enable.
             clk : in std_logic
@@ -46,15 +47,15 @@ architecture Behavioral of adsb is
 
     signal detect : std_logic := '0';
     signal triggered : std_logic := '0';
-    signal magnitude_sq : unsigned(24 downto 0) := (others => '0');
-    signal high_threshold : unsigned(24 downto 0) := (others => '0');
-    signal low_threshold : unsigned(24 downto 0) := (others => '0');
+    signal magnitude_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal high_threshold : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal low_threshold : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
 begin
 
     detector: preamble_detector port map (
-        input_i => input_i,
-        input_q => input_q,
-        detect => detect,
+        i_i => i_i,
+        q_i => q_i,
+        detect_o => detect,
         high_threshold => high_threshold,
         low_threshold => low_threshold,
         clk => clk

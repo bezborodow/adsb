@@ -13,15 +13,15 @@ end preamble_detector_tb;
 architecture test of preamble_detector_tb is
     component preamble_detector is
         port (
-            input_i : in signed(11 downto 0);
-            input_q : in signed(11 downto 0);
-            detect : out std_logic;
+            i_i : in signed(11 downto 0);
+            q_i : in signed(11 downto 0);
+            detect_o : out std_logic;
             clk : in std_logic
        );
     end component;
     
-    signal input_i : signed(11 downto 0) := (others => '0');
-    signal input_q : signed(11 downto 0) := (others => '0');
+    signal i_i : signed(11 downto 0) := (others => '0');
+    signal q_i : signed(11 downto 0) := (others => '0');
     signal detect : std_logic := '0';
 
     signal clk: std_logic := '1';
@@ -31,9 +31,9 @@ begin
     clk <= not clk after clk_period / 2;
     
     uut: preamble_detector port map (
-        input_i => input_i,
-        input_q => input_q,
-        detect => detect,
+        i_i => i_i,
+        q_i => q_i,
+        detect_o => detect,
         clk => clk
     );
     
@@ -49,8 +49,8 @@ begin
           read(line_buf, line_i);
           read(line_buf, line_q);
           
-          input_i <= to_signed(line_i, 12);
-          input_q <= to_signed(line_q, 12);
+          i_i <= to_signed(line_i, 12);
+          q_i <= to_signed(line_q, 12);
           
           wait for clk_period;
         end loop;
