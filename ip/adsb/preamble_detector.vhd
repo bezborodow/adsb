@@ -10,23 +10,25 @@ use ieee.math_real.all;
 --use UNISIM.VComponents.all;
 
 use work.correlator_pkg.all;
+use work.adsb_pkg.all;
 
 entity preamble_detector is
     generic (
-        SAMPLES_PER_SYMBOL : integer := 10; -- 40e6*500e-9
-        BUFFER_SYMBOL_LENGTH : integer := 16; -- 16 Symbols.
-        IQ_WIDTH : integer := 12
+        SAMPLES_PER_SYMBOL    : integer := DEFAULT_SAMPLES_PER_SYMBOL;
+        BUFFER_SYMBOL_LENGTH  : integer := DEFAULT_BUFFER_SYMBOL_LENGTH;
+        IQ_WIDTH              : integer := DEFAULT_IQ_WIDTH;
+        MAGNITUDE_WIDTH       : integer := IQ_WIDTH * 2 + 1
     );
     port (
         clk : in std_logic;
         i_i : in signed(IQ_WIDTH-1 downto 0);
         q_i : in signed(IQ_WIDTH-1 downto 0);
         detect_o : out std_logic := '0';
-        high_threshold : out unsigned(IQ_WIDTH*2 downto 0);
-        low_threshold : out unsigned(IQ_WIDTH*2 downto 0);
-        passthru_magnitude_sq : out unsigned(IQ_WIDTH*2 downto 0);
-        passthru_i : out unsigned(IQ_WIDTH-1 downto 0);
-        passthru_q : out unsigned(IQ_WIDTH-1 downto 0)
+        mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        high_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        low_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        i_o : out unsigned(IQ_WIDTH-1 downto 0);
+        q_o : out unsigned(IQ_WIDTH-1 downto 0)
     );
 end preamble_detector;
 
@@ -80,8 +82,8 @@ architecture Behavioral of preamble_detector is
     end function;
 
 begin
-    high_threshold <= high_threshold_r;
-    low_threshold <= low_threshold_r;
+    high_threshold_o <= high_threshold_r;
+    low_threshold_o <= low_threshold_r;
 
     trigger_process : process(clk)
         variable input_i_sq : signed(IQ_WIDTH*2-1 downto 0);

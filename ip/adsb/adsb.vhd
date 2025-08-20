@@ -23,27 +23,6 @@ end adsb;
 
 architecture Behavioral of adsb is
     constant MAGNITUDE_WIDTH : integer := IQ_WIDTH * 2 + 1;
-    component preamble_detector is
-        port (
-            i_i : in signed(IQ_WIDTH-1 downto 0);
-            q_i : in signed(IQ_WIDTH-1 downto 0);
-            high_threshold : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-            low_threshold : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-            detect_o : out std_logic;
-            clk : in std_logic
-       );
-    end component;
-
-    component schmitt_trigger is
-        port (
-            magnitude_sq : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
-            high_threshold : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
-            low_threshold : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
-            output : out std_logic;
-            ce : in std_logic := '0'; -- Clock enable.
-            clk : in std_logic
-        );
-    end component;
 
     signal detect : std_logic := '0';
     signal triggered : std_logic := '0';
@@ -52,20 +31,20 @@ architecture Behavioral of adsb is
     signal low_threshold : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
 begin
 
-    detector: preamble_detector port map (
+    detector: entity work.preamble_detector port map (
         i_i => i_i,
         q_i => q_i,
         detect_o => detect,
-        high_threshold => high_threshold,
-        low_threshold => low_threshold,
+        high_threshold_o => high_threshold,
+        low_threshold_o => low_threshold,
         clk => clk
     );
     
-    trigger: schmitt_trigger port map (
+    trigger: entity work.schmitt_trigger port map (
         magnitude_sq => magnitude_sq,
         output => triggered,
-        high_threshold => high_threshold,
-        low_threshold => low_threshold,
+        high_threshold_i => high_threshold,
+        low_threshold_i => low_threshold,
         ce => '1',
         clk => clk
     );

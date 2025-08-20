@@ -33,17 +33,6 @@ entity schmitt_trigger_tb is
 end schmitt_trigger_tb;
 
 architecture test of schmitt_trigger_tb is
-    component schmitt_trigger is
-        port (
-            magnitude_sq : in unsigned(24 downto 0);
-            output : out std_logic;
-            high_threshold : in unsigned(24 downto 0);
-            low_threshold : in unsigned(24 downto 0);
-            clk : in std_logic;
-            ce : in std_logic
-       );
-    end component;
-
     signal magnitude_sq : unsigned(24 downto 0) := (others => '0');
     signal output : std_logic := '0';
 
@@ -53,11 +42,11 @@ architecture test of schmitt_trigger_tb is
 begin
     clk <= not clk after clk_period / 2;
 
-    uut: schmitt_trigger port map (
+    uut: entity work.schmitt_trigger port map (
         magnitude_sq => magnitude_sq,
         output => output,
-        high_threshold => to_unsigned(500000, 25),
-        low_threshold => to_unsigned(50000, 25),
+        high_threshold_i => to_unsigned(500000, 25),
+        low_threshold_i => to_unsigned(50000, 25),
         ce => '1',
         clk => clk
     );
@@ -70,7 +59,6 @@ begin
         variable input_q : signed(11 downto 0) := (others => '0');
     begin
         test_runner_setup(runner, runner_cfg);
-        report "Hello world!";
         while not endfile(iq_file) loop
           readline(iq_file, line_buf);
           read(line_buf, line_i);

@@ -11,15 +11,6 @@ entity preamble_detector_tb is
 end preamble_detector_tb;
 
 architecture test of preamble_detector_tb is
-    component preamble_detector is
-        port (
-            i_i : in signed(11 downto 0);
-            q_i : in signed(11 downto 0);
-            detect_o : out std_logic;
-            clk : in std_logic
-       );
-    end component;
-    
     signal i_i : signed(11 downto 0) := (others => '0');
     signal q_i : signed(11 downto 0) := (others => '0');
     signal detect : std_logic := '0';
@@ -30,7 +21,7 @@ architecture test of preamble_detector_tb is
 begin
     clk <= not clk after clk_period / 2;
     
-    uut: preamble_detector port map (
+    uut: entity work.preamble_detector port map (
         i_i => i_i,
         q_i => q_i,
         detect_o => detect,
