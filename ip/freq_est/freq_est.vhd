@@ -73,7 +73,7 @@ begin
             end if;
 
             if (gate_i = '1') and (gate_z1 = '1') and (enable = '1') then
-                if accumulation_count < ACCUMULATION_LENGTH then
+                if to_integer(accumulation_count) < ACCUMULATION_LENGTH then
                     phasor_re := resize(i_i * i_z1 + q_i * q_z1, phasor_re'length);
                     phasor_im := resize(q_i * i_z1 - i_i * q_z1, phasor_im'length);
                     accumulator_re <= accumulator_re + resize(phasor_re, accumulator_re'length);
@@ -83,7 +83,7 @@ begin
             end if;
 
             -- Stop when accumulator is full.
-            if accumulation_count = ACCUMULATION_LENGTH-1 then
+            if to_integer(accumulation_count) = ACCUMULATION_LENGTH-1 then
                 if enable = '1' and accumulation_count > 0 then
                     vld <= '1';
                 end if;
@@ -92,7 +92,7 @@ begin
 
             -- Stop upon external stop signal.
             if stop_i = '1' then
-                if enable = '1' and accumulation_count > 0 then
+                if enable = '1' and to_integer(accumulation_count) > 0 then
                     vld <= '1';
                 end if;
                 enable <= '0';
