@@ -19,18 +19,21 @@ entity schmitt_trigger is
 end schmitt_trigger;
 
 architecture rtl of schmitt_trigger is
+    signal schmitt_r : std_logic := '0';
 begin
+    schmitt_o <= schmitt_r;
+
     trigger_process : process(clk)
     begin
         if rising_edge(clk) then
             if ce_i then
                 if (schmitt_i > high_threshold_i) then
-                    schmitt_o <= '1';
+                    schmitt_r <= '1';
                 elsif (schmitt_i < low_threshold_i) then
-                    schmitt_o <= '0';
+                    schmitt_r <= '0';
                 end if;
             else
-                schmitt_o <= '0';
+                schmitt_r <= '0';
             end if;
         end if;
     end process trigger_process;

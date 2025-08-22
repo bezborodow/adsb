@@ -24,16 +24,18 @@ end adsb;
 architecture Behavioral of adsb is
     constant MAGNITUDE_WIDTH : integer := IQ_WIDTH * 2 + 1;
 
+    -- Preamble detector signals.
     signal detect : std_logic := '0';
-    signal trigger_envelope : std_logic := '0';
-    signal magnitude_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     signal high_threshold : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     signal low_threshold : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-
+    signal detector_mag_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     signal detector_i : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal detector_q : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal detector_i_z1 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal detector_q_z1 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+
+    -- Schmitt trigger signals.
+    signal trigger_envelope : std_logic := '0';
 
     -- Frequency estimator signals.
     signal freq_est_en : std_logic := '0';
@@ -58,7 +60,7 @@ begin
 
         i_o => detector_i,
         q_o => detector_q,
-        mag_sq_o => magnitude_sq
+        mag_sq_o => detector_mag_sq
     );
     
     trigger: entity work.schmitt_trigger
@@ -68,7 +70,7 @@ begin
     port map (
         clk => clk,
         ce_i => '1',
-        schmitt_i => magnitude_sq,
+        schmitt_i => detector_mag_sq,
         high_threshold_i => high_threshold,
         low_threshold_i => low_threshold,
         schmitt_o => trigger_envelope
