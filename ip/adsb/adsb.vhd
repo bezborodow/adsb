@@ -48,7 +48,6 @@ architecture Behavioral of adsb is
     signal demod_data : std_logic_vector(111 downto 0) := (others => '0');
  
 begin
-
     detector: entity work.preamble_detector port map (
         clk => clk,
         i_i => i_i,
