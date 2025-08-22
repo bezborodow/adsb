@@ -11,27 +11,28 @@ entity adsb_tb is
 end adsb_tb;
 
 architecture test of adsb_tb is
-    component adsb is
-        port (
-            i_i : in signed(11 downto 0);
-            q_i : in signed(11 downto 0);
-            clk : in std_logic
-       );
-    end component;
-    
     signal input_i : signed(11 downto 0) := (others => '0');
     signal input_q : signed(11 downto 0) := (others => '0');
 
     signal clk: std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
 
+    signal adsb_vld: std_logic := '0';
+    signal adsb_rdy: std_logic := '0';
+    signal adsb_data: std_logic_vector(111 downto 0) := (others =>'0');
+    signal adsb_w56: std_logic := '0';
+
 begin
     clk <= not clk after clk_period / 2;
 
-    uut: adsb port map (
+    uut: entity work.adsb port map (
+        clk => clk,
         i_i => input_i,
         q_i => input_q,
-        clk => clk
+        vld_o => adsb_vld,
+        rdy_i => adsb_rdy,
+        data_o => adsb_data,
+        w56_o => adsb_w56
     );
     
     main : process

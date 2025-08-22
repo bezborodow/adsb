@@ -17,3 +17,4 @@ xgui
 *.str
 vunit_out
 *.ghw
+*.gtkw

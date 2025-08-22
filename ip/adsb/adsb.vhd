@@ -11,18 +11,26 @@ use ieee.math_real.all;
 
 entity adsb is
     generic (
-        SAMPLES_PER_SYMBOL : integer := 10; -- 40e6*500e-9
+        SAMPLES_PER_SYMBOL : integer := 10;
         IQ_WIDTH : integer := 12
     );
     port (
         clk : in std_logic;
         i_i : in signed(IQ_WIDTH-1 downto 0);
-        q_i : in signed(IQ_WIDTH-1 downto 0)
+        q_i : in signed(IQ_WIDTH-1 downto 0);
+        vld_o : out std_logic;
+        rdy_i : in std_logic;
+        w56_o : out std_logic;
+        data_o : out std_logic_vector(111 downto 0)
     );
 end adsb;
 
 architecture Behavioral of adsb is
     constant MAGNITUDE_WIDTH : integer := IQ_WIDTH * 2 + 1;
+
+    -- Internal signals and registers.
+    signal rdy_r : std_logic := '0';
+    signal vld_r : std_logic := '0';
 
     -- Preamble detector signals.
     signal detect : std_logic := '0';
@@ -38,9 +46,9 @@ architecture Behavioral of adsb is
     signal trigger_envelope : std_logic := '0';
 
     -- Frequency estimator signals.
-    signal freq_est_en : std_logic := '0';
-    signal freq_est_vld : std_logic := '0';
-    signal freq_est_rdy : std_logic := '0';
+    signal estimator_en : std_logic := '0';
+    signal estimator_vld : std_logic := '0';
+    signal estimator_rdy : std_logic := '0';
 
     -- Pulse-position modulation (PPM) demodulator signals.
     signal demod_malformed : std_logic := '0';
@@ -98,8 +106,8 @@ begin
         stop_i => '0', -- TODO
         i_i => detector_i_z1,
         q_i => detector_q_z1,
-        rdy_i => freq_est_rdy,
-        vld_o => freq_est_vld
+        rdy_i => estimator_rdy,
+        vld_o => estimator_vld
     );
 
     main_process : process(clk)
@@ -109,6 +117,23 @@ begin
             detector_q_z1 <= detector_q;
         end if;
     end process main_process;
+
+    vld_o <= vld_r;
+    rdy_r <= rdy_i;
+    rdyvld_handshake_process : process(clk)
+    begin
+        if rising_edge(clk) then
+            if demod_vld = '1' and estimator_vld = '1' then
+                vld_r <= '1';
+            end if;
+
+            if vld_r = '1' and rdy_r ='1' then
+                demod_rdy <= '1';
+                estimator_rdy <= '1';
+                vld_r <= '0';
+            end if;
+        end if;
+    end process rdyvld_handshake_process;
 
 end Behavioral;
 

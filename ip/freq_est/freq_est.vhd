@@ -84,13 +84,17 @@ begin
 
             -- Stop when accumulator is full.
             if accumulation_count = ACCUMULATION_LENGTH-1 then
-                vld <= '1';
+                if enable = '1' and accumulation_count > 0 then
+                    vld <= '1';
+                end if;
                 enable <= '0';
             end if;
 
             -- Stop upon external stop signal.
             if stop_i = '1' then
-                vld <= '1';
+                if enable = '1' and accumulation_count > 0 then
+                    vld <= '1';
+                end if;
                 enable <= '0';
             end if;
 
