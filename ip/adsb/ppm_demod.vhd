@@ -10,20 +10,20 @@ entity ppm_demod is
     );
     port (
         clk : in std_logic;
-        ce : in std_logic;
-        input : in std_logic;
-        detect : in std_logic;
-        valid : out std_logic;
-        w56 : out std_logic;
-        ready : in std_logic;
-        malformed : out std_logic;
-        data : out std_logic_vector(111 downto 0)
+        ce_i : in std_logic;
+        envelope_i : in std_logic;
+        detect_i : in std_logic;
+        vld_o : out std_logic;
+        w56_o : out std_logic;
+        rdy_i : in std_logic;
+        malformed_o : out std_logic;
+        data_o : out std_logic_vector(111 downto 0)
     );
 end ppm_demod;
 architecture Behavioral of ppm_demod is
     constant HALF_SPS : integer := SAMPLES_PER_SYMBOL / 2;
     signal edge_timer : unsigned(15 downto 0) := (others => '0');
-    signal input_z1 : std_logic := '0';
+    signal envelope_z1 : std_logic := '0';
     signal start_demod : std_logic := '0';
     --signal symbol : std_logic_vector(1 downto 0) := "00";
     signal data_r : std_logic_vector(111 downto 0) := (others => '0');
@@ -33,28 +33,28 @@ architecture Behavioral of ppm_demod is
 
 begin
 
-    data <= data_r;
-    malformed <= malformed_r;
-    valid <= valid_r;
-    w56 <= w56_r;
+    data_o <= data_r;
+    malformed_o <= malformed_r;
+    vld_o <= valid_r;
+    w56_o <= w56_r;
 
     timing_process : process(clk)
         variable input_rising : std_logic := '0';
         variable input_falling : std_logic := '0';
     begin
         if rising_edge(clk) then
-            if ce then
-                if detect = '1' then
+            if ce_i then
+                if detect_i = '1' then
                     edge_timer <= (others => '0');
                     start_demod <= '1';
                 else
                     start_demod <= '0';
-                    if input = '0' and input_z1 = '1' then
+                    if envelope_i = '0' and envelope_z1 = '1' then
                         input_rising := '1';
                     else
                         input_rising := '0';
                     end if;
-                    if input = '1' and input_z1 = '0' then
+                    if envelope_i = '1' and envelope_z1 = '0' then
                         input_falling := '1';
                     else
                         input_falling := '0';
@@ -67,7 +67,7 @@ begin
                     end if;
                 end if;
             end if;
-            input_z1 <= input;
+            envelope_z1 <= envelope_i;
         end if;
     end process timing_process;
 
@@ -80,7 +80,7 @@ begin
         variable invalid_symbol : boolean := false;
     begin
         if rising_edge(clk) then
-            if ce = '1' and valid_r = '0' then
+            if ce_i = '1' and valid_r = '0' then
                 if start_demod = '1' then
                     pulse_position := "1";
                     index := (others => '0');
@@ -99,7 +99,7 @@ begin
                         do_sample := true;
                     end if;
                     if edge_timer = HALF_SPS*5-1 then
-                        if index = 56 and input_z1 = '0' then
+                        if index = 56 and envelope_z1 = '0' then
                             valid_r <= '1';
                             w56_r <= '1';
                         else
@@ -108,7 +108,7 @@ begin
                     end if;
 
                     if do_sample then
-                        symbol(to_integer(pulse_position)) := input_z1;
+                        symbol(to_integer(pulse_position)) := envelope_z1;
                         if pulse_position = "1" and to_integer(index) < 112 then
                             invalid_symbol := false;
                             if symbol = "01" then
@@ -135,7 +135,7 @@ begin
                 end if;
             end if;
 
-            if ce = '1' and valid_r = '1' and ready = '1' then
+            if ce_i = '1' and valid_r = '1' and rdy_i = '1' then
                 valid_r <= '0';
                 data_r <= (others => '0');
                 w56_r <= '0';

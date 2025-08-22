@@ -12,20 +12,6 @@ entity ppm_demod_tb is
 end ppm_demod_tb;
 
 architecture test of ppm_demod_tb is
-    component ppm_demod is
-        port (
-            clk : in std_logic;
-            ce : in std_logic;
-            input : in std_logic;
-            detect : in std_logic;
-            valid : out std_logic;
-            w56 : out std_logic;
-            ready : in std_logic;
-            malformed : out std_logic;
-            data : out std_logic_vector(111 downto 0)
-       );
-    end component;
-
     signal clk : std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
 
@@ -39,7 +25,7 @@ architecture test of ppm_demod_tb is
 
     procedure send_frame(
         signal input_s : out std_logic;
-        signal detect_S : out std_logic;
+        signal detect_s : out std_logic;
         frame_length : in integer
     ) is
     begin
@@ -78,16 +64,16 @@ architecture test of ppm_demod_tb is
 begin
     clk <= not clk after clk_period / 2;
 
-    uut: ppm_demod port map (
-        ce => '1',
+    uut: entity work.ppm_demod port map (
         clk => clk,
-        ready => ready,
-        input => input,
-        detect => detect,
-        valid => valid,
-        data => data,
-        w56 => w56,
-        malformed => malformed
+        ce_i => '1',
+        rdy_i => ready,
+        envelope_i => input,
+        detect_i => detect,
+        vld_o => valid,
+        data_o => data,
+        w56_o => w56,
+        malformed_o => malformed
     );
 
     main : process
