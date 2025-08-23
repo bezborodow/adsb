@@ -57,7 +57,10 @@ create_bd_cell -type module -reference adsb_uart i_adsb_uart
 connect_bd_net [get_bd_pins i_adsb_uart/i_i] [get_bd_pins rx_fir_decimator/data_out_0]
 connect_bd_net [get_bd_pins i_adsb_uart/q_i] [get_bd_pins rx_fir_decimator/data_out_1]
 connect_bd_net [get_bd_pins axi_ad9361/l_clk] [get_bd_pins i_adsb_uart/clk]
+create_bd_port -dir O uart_tx_o
+connect_bd_net [get_bd_pins i_adsb_uart/uart_tx_o] [get_bd_ports uart_tx_o]
 
+update_compile_order -fileset sources_1
 validate_bd_design
 save_bd_design
 

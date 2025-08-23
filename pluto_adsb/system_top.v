@@ -105,6 +105,7 @@ module system_top (
   wire            pl_txdata;
 
   wire            strobe;
+  wire            uart_tx_o;
 
   // instantiations
   strobe_gpio i_strobe (
@@ -147,7 +148,8 @@ module system_top (
 
   //PL_GPIO0
   //assign pl_gpio0 = phaser_enable ? pl_txdata : pl_spi_mosi;
-  assign pl_gpio0 = strobe;
+  //assign pl_gpio0 = strobe;
+  assign pl_gpio0 = uart_tx_o;
 
   system_wrapper i_system_wrapper (
     .ddr_addr (ddr_addr),

@@ -1,5 +1,6 @@
 module strobe_gpio (
   input  wire clk,
+  //input  wire passthrough,
   //input  wire resetn,     // active-low reset
   output reg  strobe    // goes to the unused header pin
 );
@@ -15,6 +16,7 @@ module strobe_gpio (
       counter  <= counter + 1;
       strobe <= counter[26]; // toggles at ~0.75 Hz
     //end
+    //strobe <= passthrough;
   end
 
 endmodule
