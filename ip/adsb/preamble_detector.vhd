@@ -9,7 +9,7 @@ use ieee.math_real.all;
 --library UNISIM;
 --use UNISIM.VComponents.all;
 
-use work.correlator_pkg.all;
+--use work.correlator_pkg.all;
 use work.adsb_pkg.all;
 
 entity preamble_detector is

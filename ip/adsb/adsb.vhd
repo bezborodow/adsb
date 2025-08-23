@@ -25,7 +25,7 @@ entity adsb is
     );
 end adsb;
 
-architecture Behavioral of adsb is
+architecture rtl of adsb is
     constant MAGNITUDE_WIDTH : integer := IQ_WIDTH * 2 + 1;
 
     -- Internal signals and registers.
@@ -102,7 +102,7 @@ begin
         clk => clk,
         gate_i => trigger_envelope,
         start_i => detect,
-        --stop_i => malformed or demod_vld,
+        --stop_i => demod_malformed or demod_vld,
         stop_i => '0', -- TODO
         i_i => detector_i_z1,
         q_i => detector_q_z1,
@@ -130,5 +130,5 @@ begin
         end if;
     end process rdyvld_handshake_process;
 
-end Behavioral;
+end rtl;
 
