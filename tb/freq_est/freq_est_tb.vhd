@@ -10,7 +10,6 @@ entity freq_est_tb is
 --  port ( );
     generic (runner_cfg : string);
 end freq_est_tb;
-
 architecture test of freq_est_tb is
     constant IQ_WIDTH : integer := 12;
 
@@ -78,6 +77,18 @@ begin
         wait for clk_period;
         stop <= '0';
         wait for clk_period;
+
+        assert vld = '1';
+        rdy <= '1';
+        wait for clk_period;
+
+        rdy <= '0';
+        wait for clk_period;
+
+        assert vld = '0';
+        wait for clk_period * 20;
+
+        assert vld = '0';
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;

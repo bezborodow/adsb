@@ -120,18 +120,13 @@ begin
 
     vld_o <= vld_r;
     rdy_r <= rdy_i;
+    vld_r <= demod_vld and estimator_vld;
+    demod_rdy <= vld_r and rdy_r;
+    estimator_rdy <= vld_r and rdy_r;
+
     rdyvld_handshake_process : process(clk)
     begin
         if rising_edge(clk) then
-            if demod_vld = '1' and estimator_vld = '1' then
-                vld_r <= '1';
-            end if;
-
-            if vld_r = '1' and rdy_r ='1' then
-                demod_rdy <= '1';
-                estimator_rdy <= '1';
-                vld_r <= '0';
-            end if;
         end if;
     end process rdyvld_handshake_process;
 

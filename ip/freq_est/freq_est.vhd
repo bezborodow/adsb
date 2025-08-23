@@ -36,10 +36,10 @@ architecture rtl of freq_est is
     signal accumulation_count : unsigned(integer(ceil(log2(real(ACCUMULATION_LENGTH))))-1 downto 0) := (others => '0');
     signal enable : std_logic := '0';
 
-    signal vld : std_logic := '0';
+    signal vld_r : std_logic := '0';
 
 begin
-    vld_o <= vld;
+    vld_o <= vld_r;
 
     -- Delayed signals.
     delay_process : process(clk)
@@ -62,7 +62,7 @@ begin
             accumulator_im <= (others => '0');
             accumulation_count <= (others => '0');
             enable <= '0';
-            vld <= '0';
+            vld_r <= '0';
         end procedure reset_procedure;
     begin
         if rising_edge(clk) then
@@ -85,7 +85,7 @@ begin
             -- Stop when accumulator is full.
             if to_integer(accumulation_count) = ACCUMULATION_LENGTH-1 then
                 if enable = '1' and accumulation_count > 0 then
-                    vld <= '1';
+                    vld_r <= '1';
                 end if;
                 enable <= '0';
             end if;
@@ -93,13 +93,13 @@ begin
             -- Stop upon external stop signal.
             if stop_i = '1' then
                 if enable = '1' and to_integer(accumulation_count) > 0 then
-                    vld <= '1';
+                    vld_r <= '1';
                 end if;
                 enable <= '0';
             end if;
 
             -- Reset when data has been read.
-            if vld = '1' and rdy_i = '1' then
+            if vld_r = '1' and rdy_i = '1' then
                 reset_procedure;   
             end if;
         end if;

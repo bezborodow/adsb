@@ -34,7 +34,7 @@ begin
         data_o => adsb_data,
         w56_o => adsb_w56
     );
-    
+
     main : process
         file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
         variable line_buf : line;
@@ -43,16 +43,27 @@ begin
         test_runner_setup(runner, runner_cfg);
         report "Hello world!";
         while not endfile(iq_file) loop
-          readline(iq_file, line_buf);
-          read(line_buf, line_i);
-          read(line_buf, line_q);
-          
-          input_i <= to_signed(line_i, 12);
-          input_q <= to_signed(line_q, 12);
-          
-          wait for clk_period;
+            readline(iq_file, line_buf);
+            read(line_buf, line_i);
+            read(line_buf, line_q);
+
+            input_i <= to_signed(line_i, 12);
+            input_q <= to_signed(line_q, 12);
+
+            wait for clk_period;
         end loop;
-        
+
+        assert adsb_vld = '1' report "Not ready. Should be ready.";
+        adsb_rdy <= '1';
+        wait for clk_period;
+
+        assert adsb_vld = '1';
+        adsb_rdy <= '0';
+        wait for clk_period;
+
+        assert adsb_vld = '0';
+        wait for clk_period * 20;
+
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
     end process main;
