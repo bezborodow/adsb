@@ -26,7 +26,7 @@ begin
     trigger_process : process(clk)
     begin
         if rising_edge(clk) then
-            if ce_i then
+            if ce_i = '1' then
                 if (schmitt_i > high_threshold_i) then
                     schmitt_r <= '1';
                 elsif (schmitt_i < low_threshold_i) then

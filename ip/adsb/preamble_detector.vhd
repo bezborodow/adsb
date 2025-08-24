@@ -17,7 +17,7 @@ entity preamble_detector is
         SAMPLES_PER_SYMBOL    : integer := DEFAULT_SAMPLES_PER_SYMBOL;
         BUFFER_SYMBOL_LENGTH  : integer := DEFAULT_BUFFER_SYMBOL_LENGTH;
         IQ_WIDTH              : integer := DEFAULT_IQ_WIDTH;
-        MAGNITUDE_WIDTH       : integer := IQ_WIDTH * 2 + 1
+        MAGNITUDE_WIDTH       : integer := DEFAULT_IQ_WIDTH * 2 + 1
     );
     port (
         clk : in std_logic;
@@ -41,7 +41,8 @@ architecture Behavioral of preamble_detector is
 
     -- Where each pulse in the preamble starts.
     -- There are four pulses in the preamble of an ADS-B message.
-    constant PREAMBLE_POS : integer_vector := (0, 2, 7, 9);
+    type int_array_t is array (natural range <>) of integer;
+    constant PREAMBLE_POS : int_array_t := (0, 2, 7, 9);
 
     -- Energy in each pulse window.
     constant WINDOW_WIDTH : integer := (IQ_WIDTH*2) + integer(ceil(log2(real(SAMPLES_PER_SYMBOL))));
@@ -165,7 +166,13 @@ begin
                 end if;
             end loop;
 
-            local_detect := true when all_thresholds_ok else false;
+            --VHDL 1076-2008 only.
+            --local_detect := true when all_thresholds_ok else false;
+            if all_thresholds_ok then
+                local_detect := true;
+            else
+                local_detect := false;
+            end if;
 
             energy_history(4) := energy_history(3);
             energy_history(3) := energy_history(2);

@@ -43,7 +43,7 @@ begin
         variable input_falling : std_logic := '0';
     begin
         if rising_edge(clk) then
-            if ce_i then
+            if ce_i = '1' then
                 if detect_i = '1' then
                     edge_timer <= (others => '0');
                     start_demod <= '1';
@@ -60,7 +60,7 @@ begin
                         input_falling := '0';
                     end if;
 
-                    if input_rising or input_falling then
+                    if input_rising = '1' or input_falling = '1' then
                         edge_timer <= (others => '0');
                     else 
                         edge_timer <= edge_timer + 1;
