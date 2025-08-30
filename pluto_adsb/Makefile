@@ -8,7 +8,7 @@
 
 PROJECT_NAME := pluto
 M_DIR := $(shell pwd)
-export ADI_HDL_DIR := $(M_DIR)/../../hdl
+export ADI_HDL_DIR := $(realpath $(M_DIR)/../../hdl)
 export ADI_IGNORE_VERSION_CHECK := 1
 VIVADO := vivado -mode batch -source
 
