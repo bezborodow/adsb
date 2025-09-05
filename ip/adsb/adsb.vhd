@@ -1,17 +1,16 @@
 library ieee;
 use ieee.std_logic_1164.all;
-
 use ieee.numeric_std.all;
 use ieee.math_real.all;
-
 use work.adsb_pkg.all;
 
 entity adsb is
     generic (
-        SAMPLES_PER_SYMBOL     : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
-        BUFFER_LENGTH          : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
         IQ_WIDTH               : integer := ADSB_DEFAULT_IQ_WIDTH;
-        PREAMBLE_POSITION      : adsb_int_array_t := ADSB_DEFAULT_PREAMBLE_POSITION;
+        SAMPLES_PER_SYMBOL     : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
+        PREAMBLE_POSITION1     : integer := 20;
+        PREAMBLE_POSITION2     : integer := 70;
+        PREAMBLE_POSITION3     : integer := 90;
         PREAMBLE_BUFFER_LENGTH : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
         ACCUMULATION_LENGTH    : integer := 1024
     );
@@ -72,7 +71,9 @@ begin
             IQ_WIDTH           => IQ_WIDTH,
             MAGNITUDE_WIDTH    => MAGNITUDE_WIDTH,
             BUFFER_LENGTH      => PREAMBLE_BUFFER_LENGTH,
-            PREAMBLE_POSITION  => ADSB_DEFAULT_PREAMBLE_POSITION
+            PREAMBLE_POSITION1 => PREAMBLE_POSITION1,
+            PREAMBLE_POSITION2 => PREAMBLE_POSITION2,
+            PREAMBLE_POSITION3 => PREAMBLE_POSITION3
         )
         port map (
             clk => clk,

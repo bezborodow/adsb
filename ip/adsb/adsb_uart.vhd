@@ -10,7 +10,9 @@ entity adsb_uart is
         IQ_WIDTH : integer := ADSB_IQ_WIDTH;
         SAMPLES_PER_SYMBOL : integer := ADSB_SAMPLES_PER_SYMBOL;
         PREAMBLE_BUFFER_LENGTH : integer := ADSB_PREAMBLE_BUFFER_LENGTH;
-        PREAMBLE_POSITION : adsb_int_array_t := ADSB_PREAMBLE_POSITION;
+        PREAMBLE_POSITION1 : integer := 61;
+        PREAMBLE_POSITION2 : integer := 215;
+        PREAMBLE_POSITION3 : integer := 276;
         ACCUMULATION_LENGTH : integer := 4096
     );
     port (
@@ -38,19 +40,40 @@ architecture rtl of adsb_uart is
     signal adsb_im : signed(31 downto 0) := (others => '0');
 
 begin
-    adsb_sys: entity work.adsb port map (
-        clk => clk,
-        d_vld_i => d_vld_r,
-        i_i => i_r,
-        q_i => q_r,
-        vld_o => adsb_vld,
-        detect_o => adsb_detect,
-        rdy_i => '0',
-        data_o => adsb_data,
-        w56_o => adsb_w56,
-        est_re_o => adsb_re,
-        est_im_o => adsb_im
-    );
+    i_adsb : entity work.adsb
+        generic map (
+            SAMPLES_PER_SYMBOL     => SAMPLES_PER_SYMBOL,
+            IQ_WIDTH               => IQ_WIDTH,
+            PREAMBLE_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH,
+            PREAMBLE_POSITION1     => PREAMBLE_POSITION1,
+            PREAMBLE_POSITION2     => PREAMBLE_POSITION2,
+            PREAMBLE_POSITION3     => PREAMBLE_POSITION3,
+            ACCUMULATION_LENGTH    => ACCUMULATION_LENGTH
+        )
+        port map (
+            clk => clk,
+            d_vld_i => d_vld_r,
+            i_i => i_r,
+            q_i => q_r,
+            vld_o => adsb_vld,
+            detect_o => adsb_detect,
+            rdy_i => '0',
+            data_o => adsb_data,
+            w56_o => adsb_w56,
+            est_re_o => adsb_re,
+            est_im_o => adsb_im
+        );
+
+    --u_uart_tx : entity work.uart_tx
+        --generic map (
+            --CLK_DIV => 533
+        --)
+        --port map (
+            --clk => clk,
+            --vld_i => uart_vld,
+            --rdy_o => uart_rdy,
+            --data_i => uart_data,
+        --);
 
     i_r <= i_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
     q_r <= q_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);

@@ -1,15 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
-
 use ieee.numeric_std.all;
 use ieee.math_real.all;
-
--- Uncomment the following library declaration if instantiating
--- any Xilinx leaf cells in this code.
---library UNISIM;
---use UNISIM.VComponents.all;
-
---use work.correlator_pkg.all;
 use work.adsb_pkg.all;
 
 entity preamble_detector is
@@ -18,7 +10,9 @@ entity preamble_detector is
         IQ_WIDTH              : integer := ADSB_DEFAULT_IQ_WIDTH;
         MAGNITUDE_WIDTH       : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1;
         BUFFER_LENGTH         : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
-        PREAMBLE_POSITION     : adsb_int_array_t := ADSB_DEFAULT_PREAMBLE_POSITION
+        PREAMBLE_POSITION1     : integer := 20;
+        PREAMBLE_POSITION2     : integer := 70;
+        PREAMBLE_POSITION3     : integer := 90
     );
     port (
         clk : in std_logic;
@@ -46,8 +40,13 @@ architecture Behavioral of preamble_detector is
 
     -- Where each pulse in the preamble starts.
     -- There are four pulses in the preamble of an ADS-B message.
-    --type int_array_t is array (natural range <>) of integer;
-    --constant PREAMBLE_POSITION : int_array_t := (0, 2, 7, 9);
+    --constant PREAMBLE_POSITION : adsb_int_array_t := (0, 2, 7, 9);
+    constant PREAMBLE_POSITION : adsb_int_array_t := (
+        0,
+        PREAMBLE_POSITION1,
+        PREAMBLE_POSITION2,
+        PREAMBLE_POSITION3
+    );
 
     -- Energy in each pulse window.
     constant WINDOW_WIDTH : integer := (IQ_WIDTH*2) + integer(ceil(log2(real(SAMPLES_PER_SYMBOL))));
