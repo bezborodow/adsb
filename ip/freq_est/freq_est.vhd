@@ -6,9 +6,11 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
+use work.adsb_pkg.all;
+
 entity freq_est is
     generic (
-        IQ_WIDTH : integer := 12;
+        IQ_WIDTH : integer := ADSB_DEFAULT_IQ_WIDTH;
         ACCUMULATION_LENGTH : integer := 1024
     );
     port (

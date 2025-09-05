@@ -4,15 +4,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 
--- Uncomment the following library declaration if instantiating
--- any Xilinx leaf cells in this code.
---library UNISIM;
---use UNISIM.VComponents.all;
+use work.adsb_pkg.all;
 
 entity adsb is
     generic (
-        SAMPLES_PER_SYMBOL : integer := 10;
-        IQ_WIDTH : integer := 12
+        SAMPLES_PER_SYMBOL : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
+        IQ_WIDTH : integer := ADSB_DEFAULT_IQ_WIDTH
     );
     port (
         clk : in std_logic;
@@ -20,6 +17,7 @@ entity adsb is
         i_i : in signed(IQ_WIDTH-1 downto 0);
         q_i : in signed(IQ_WIDTH-1 downto 0);
         vld_o : out std_logic;
+        detect_o : out std_logic;
         rdy_i : in std_logic;
         w56_o : out std_logic;
         data_o : out std_logic_vector(111 downto 0)
@@ -126,6 +124,7 @@ begin
 
     d_vld_r <= d_vld_i;
     vld_o <= vld_r;
+    detect_o <= detect;
     rdy_r <= rdy_i;
     vld_r <= demod_vld and estimator_vld;
     demod_rdy <= vld_r and rdy_r;

@@ -1,12 +1,12 @@
 library ieee;
 use ieee.std_logic_1164.all;
-
 use ieee.numeric_std.all;
 use ieee.math_real.all;
+use work.adsb_pkg.all;
 
 entity ppm_demod is
     generic (
-        SAMPLES_PER_SYMBOL : integer := 10
+        SAMPLES_PER_SYMBOL : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL
     );
     port (
         clk : in std_logic;

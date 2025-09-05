@@ -2,7 +2,7 @@
 
 # Sample rate in hertz or MSPS.
 fs = 61.44e6
-#fs = 20e6
+fs = 20e6
 print(f"fs = {fs} Hz")
 
 # Symbol length period in seconds.

@@ -14,10 +14,11 @@ use work.adsb_pkg.all;
 
 entity preamble_detector is
     generic (
-        SAMPLES_PER_SYMBOL    : integer := DEFAULT_SAMPLES_PER_SYMBOL;
-        BUFFER_SYMBOL_LENGTH  : integer := DEFAULT_BUFFER_SYMBOL_LENGTH;
-        IQ_WIDTH              : integer := DEFAULT_IQ_WIDTH;
-        MAGNITUDE_WIDTH       : integer := DEFAULT_IQ_WIDTH * 2 + 1
+        SAMPLES_PER_SYMBOL    : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
+        BUFFER_LENGTH         : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
+        IQ_WIDTH              : integer := ADSB_DEFAULT_IQ_WIDTH;
+        MAGNITUDE_WIDTH       : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1;
+        PREAMBLE_POSITION     : adsb_int_array_t := ADSB_DEFAULT_PREAMBLE_POSITION
     );
     port (
         clk : in std_logic;
@@ -40,17 +41,17 @@ architecture Behavioral of preamble_detector is
     -- How many samples the IQ stream is delayed by compared to when the preamble is detected.
     constant PIPELINE_DELAY : integer := 5;
 
-    constant BUFFER_LENGTH : integer := SAMPLES_PER_SYMBOL * BUFFER_SYMBOL_LENGTH;
+    --constant BUFFER_LENGTH : integer := SAMPLES_PER_SYMBOL * BUFFER_SYMBOL_LENGTH;
     constant CORRELATION_WIDTH : integer := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
 
     -- Where each pulse in the preamble starts.
     -- There are four pulses in the preamble of an ADS-B message.
-    type int_array_t is array (natural range <>) of integer;
-    constant PREAMBLE_POS : int_array_t := (0, 2, 7, 9);
+    --type int_array_t is array (natural range <>) of integer;
+    --constant PREAMBLE_POSITION : int_array_t := (0, 2, 7, 9);
 
     -- Energy in each pulse window.
     constant WINDOW_WIDTH : integer := (IQ_WIDTH*2) + integer(ceil(log2(real(SAMPLES_PER_SYMBOL))));
-    type symbol_energy_t is array (0 to PREAMBLE_POS'length-1) of unsigned(WINDOW_WIDTH-1 downto 0);
+    type symbol_energy_t is array (0 to PREAMBLE_POSITION'length-1) of unsigned(WINDOW_WIDTH-1 downto 0);
     signal sym_energy : symbol_energy_t := (others => (others => '0'));
 
     -- Buffers for magnitude-squared and IQ samples.
@@ -78,9 +79,10 @@ architecture Behavioral of preamble_detector is
         variable s       : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
         variable idx_sym : integer;
     begin
-        for i in 0 to PREAMBLE_POS'length-1 loop
+        for i in 0 to PREAMBLE_POSITION'length-1 loop
             for ii in 0 to SAMPLES_PER_SYMBOL-1 loop
-                idx_sym := PREAMBLE_POS(i) * SAMPLES_PER_SYMBOL + ii;
+                --idx_sym := PREAMBLE_POSITION(i) * SAMPLES_PER_SYMBOL + ii;
+                idx_sym := PREAMBLE_POSITION(i) + ii;
                 if idx_sym >= sr'low and idx_sym <= sr'high then
                     s := resize(sr(idx_sym), m'length);
                     if s > m then
@@ -129,21 +131,21 @@ begin
                     q_reg(i) <= q_reg(i+1);
                 end loop;
 
-                -- zero local accumulators
-                for j in 0 to PREAMBLE_POS'length-1 loop
+                -- Zero local accumulators.
+                for j in 0 to PREAMBLE_POSITION'length-1 loop
                     tmp_sym(j) := (others => '0');
                 end loop;
 
                 -- sum each symbol bin from the shift_reg. Assumes shift_reg(0) is most recent sample.
-                for i in 0 to PREAMBLE_POS'length-1 loop
+                for i in 0 to PREAMBLE_POSITION'length-1 loop
                     for ii in 0 to SAMPLES_PER_SYMBOL-1 loop
-                        idx_sym := PREAMBLE_POS(i)*SAMPLES_PER_SYMBOL + ii;
+                        idx_sym := PREAMBLE_POSITION(i) + ii;
                         tmp_sym(i) := tmp_sym(i) + resize(shift_reg(idx_sym), tmp_sym(i)'length);
                     end loop;
                 end loop;
 
                 -- write back to signals (or keep as variables)
-                for j in 0 to PREAMBLE_POS'length-1 loop
+                for j in 0 to PREAMBLE_POSITION'length-1 loop
                     sym_energy(j) <= tmp_sym(j);
                 end loop;
 
@@ -167,7 +169,7 @@ begin
             if ce_r = '1' then
                 threshold := resize((energy * to_unsigned(3, energy'length+2)) srl 4, energy'length);
                 all_thresholds_ok := true;
-                for i in PREAMBLE_POS'range loop
+                for i in PREAMBLE_POSITION'range loop
                     if resize(sym_energy(i), energy'length) <= threshold then
                         all_thresholds_ok := false;
                     end if;
