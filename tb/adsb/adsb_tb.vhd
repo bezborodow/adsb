@@ -27,6 +27,7 @@ begin
 
     uut: entity work.adsb port map (
         clk => clk,
+        d_vld_i => '1',
         i_i => input_i,
         q_i => input_q,
         vld_o => adsb_vld,

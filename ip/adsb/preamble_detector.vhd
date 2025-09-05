@@ -21,6 +21,7 @@ entity preamble_detector is
     );
     port (
         clk : in std_logic;
+        ce_i : in std_logic; -- Clock enable.
         i_i : in signed(IQ_WIDTH-1 downto 0);
         q_i : in signed(IQ_WIDTH-1 downto 0);
         detect_o : out std_logic := '0';
@@ -33,6 +34,9 @@ entity preamble_detector is
 end preamble_detector;
 
 architecture Behavioral of preamble_detector is
+    -- Clock enable.
+    signal ce_r : std_logic := '0';
+
     -- How many samples the IQ stream is delayed by compared to when the preamble is detected.
     constant PIPELINE_DELAY : integer := 5;
 
@@ -92,6 +96,7 @@ architecture Behavioral of preamble_detector is
     end function;
 
 begin
+    ce_r <= ce_i;
     high_threshold_o <= high_threshold_r;
     low_threshold_o <= low_threshold_r;
 
@@ -107,47 +112,48 @@ begin
         constant THRESHOLD_SCALE : unsigned(CORRELATION_WIDTH-1 downto 0) := to_unsigned(1000000000, CORRELATION_WIDTH);
     begin
         if rising_edge(clk) then
-            input_i_sq := i_i * i_i;
-            input_q_sq := q_i * q_i;
-            magnitude_sq := resize(unsigned(input_i_sq), magnitude_sq'length) + resize(unsigned(input_q_sq), magnitude_sq'length);
+            if ce_r = '1' then
+                input_i_sq := i_i * i_i;
+                input_q_sq := q_i * q_i;
+                magnitude_sq := resize(unsigned(input_i_sq), magnitude_sq'length) + resize(unsigned(input_q_sq), magnitude_sq'length);
 
-            -- Append most recently arrived sample onto the end of the shift register.
-	        shift_reg(BUFFER_LENGTH-1) <= magnitude_sq;
-	        i_reg(PIPELINE_DELAY-1) <= i_i;
-	        q_reg(PIPELINE_DELAY-1) <= q_i;
-            for i in 0 to BUFFER_LENGTH-2 loop
-                shift_reg(i) <= shift_reg(i+1);
-            end loop;
-            for i in 0 to PIPELINE_DELAY-2 loop
-                i_reg(i) <= i_reg(i+1);
-                q_reg(i) <= q_reg(i+1);
-            end loop;
-
-            -- zero local accumulators
-            for j in 0 to PREAMBLE_POS'length-1 loop
-                tmp_sym(j) := (others => '0');
-            end loop;
-
-            -- sum each symbol bin from the shift_reg. Assumes shift_reg(0) is most recent sample.
-            for i in 0 to PREAMBLE_POS'length-1 loop
-                for ii in 0 to SAMPLES_PER_SYMBOL-1 loop
-                    idx_sym := PREAMBLE_POS(i)*SAMPLES_PER_SYMBOL + ii;
-                    tmp_sym(i) := tmp_sym(i) + resize(shift_reg(idx_sym), tmp_sym(i)'length);
+                -- Append most recently arrived sample onto the end of the shift register.
+                shift_reg(BUFFER_LENGTH-1) <= magnitude_sq;
+                i_reg(PIPELINE_DELAY-1) <= i_i;
+                q_reg(PIPELINE_DELAY-1) <= q_i;
+                for i in 0 to BUFFER_LENGTH-2 loop
+                    shift_reg(i) <= shift_reg(i+1);
                 end loop;
-            end loop;
+                for i in 0 to PIPELINE_DELAY-2 loop
+                    i_reg(i) <= i_reg(i+1);
+                    q_reg(i) <= q_reg(i+1);
+                end loop;
 
-            -- write back to signals (or keep as variables)
-            for j in 0 to PREAMBLE_POS'length-1 loop
-                sym_energy(j) <= tmp_sym(j);
-            end loop;
+                -- zero local accumulators
+                for j in 0 to PREAMBLE_POS'length-1 loop
+                    tmp_sym(j) := (others => '0');
+                end loop;
 
-            sum_energy := (others => '0');
-            for i in 0 to BUFFER_LENGTH-1 loop
-                sum_energy := sum_energy + resize(shift_reg(BUFFER_LENGTH-i-1), sum_energy'length);
-            end loop;
-            energy <= sum_energy;
+                -- sum each symbol bin from the shift_reg. Assumes shift_reg(0) is most recent sample.
+                for i in 0 to PREAMBLE_POS'length-1 loop
+                    for ii in 0 to SAMPLES_PER_SYMBOL-1 loop
+                        idx_sym := PREAMBLE_POS(i)*SAMPLES_PER_SYMBOL + ii;
+                        tmp_sym(i) := tmp_sym(i) + resize(shift_reg(idx_sym), tmp_sym(i)'length);
+                    end loop;
+                end loop;
+
+                -- write back to signals (or keep as variables)
+                for j in 0 to PREAMBLE_POS'length-1 loop
+                    sym_energy(j) <= tmp_sym(j);
+                end loop;
+
+                sum_energy := (others => '0');
+                for i in 0 to BUFFER_LENGTH-1 loop
+                    sum_energy := sum_energy + resize(shift_reg(BUFFER_LENGTH-i-1), sum_energy'length);
+                end loop;
+                energy <= sum_energy;
+            end if;
         end if;
-
     end process trigger_process;
 
     detect_process : process(clk)
@@ -158,46 +164,48 @@ begin
         variable max_magnitude : unsigned(MAGNITUDE_WIDTH-1 downto 0);
     begin
         if rising_edge(clk) then
-            threshold := resize((energy * to_unsigned(3, energy'length+2)) srl 4, energy'length);
-            all_thresholds_ok := true;
-            for i in PREAMBLE_POS'range loop
-                if resize(sym_energy(i), energy'length) <= threshold then
-                    all_thresholds_ok := false;
+            if ce_r = '1' then
+                threshold := resize((energy * to_unsigned(3, energy'length+2)) srl 4, energy'length);
+                all_thresholds_ok := true;
+                for i in PREAMBLE_POS'range loop
+                    if resize(sym_energy(i), energy'length) <= threshold then
+                        all_thresholds_ok := false;
+                    end if;
+                end loop;
+
+                --VHDL 1076-2008 only.
+                --local_detect := true when all_thresholds_ok else false;
+                if all_thresholds_ok then
+                    local_detect := true;
+                else
+                    local_detect := false;
                 end if;
-            end loop;
 
-            --VHDL 1076-2008 only.
-            --local_detect := true when all_thresholds_ok else false;
-            if all_thresholds_ok then
-                local_detect := true;
-            else
-                local_detect := false;
-            end if;
+                energy_history(4) := energy_history(3);
+                energy_history(3) := energy_history(2);
+                energy_history(2) := energy_history(1);
+                energy_history(1) := energy_history(0);
+                if local_detect then
+                    energy_history(0) := energy;
+                else
+                    energy_history(0) := (others => '0');
+                end if;
 
-            energy_history(4) := energy_history(3);
-            energy_history(3) := energy_history(2);
-            energy_history(2) := energy_history(1);
-            energy_history(1) := energy_history(0);
-            if local_detect then
-                energy_history(0) := energy;
-            else
-                energy_history(0) := (others => '0');
-            end if;
-
-            if energy_history(2) > 0 then
-                if (energy_history(2) > energy_history(0)) and
-                   (energy_history(2) > energy_history(1)) and
-                   (energy_history(2) > energy_history(3)) and
-                   (energy_history(2) > energy_history(4)) then
-                    detect_o <= '1';
-                    max_magnitude := max_over_preamble(shift_reg);
-                    high_threshold_r <= max_magnitude srl 1;
-                    low_threshold_r <= max_magnitude srl 3;
+                if energy_history(2) > 0 then
+                    if (energy_history(2) > energy_history(0)) and
+                       (energy_history(2) > energy_history(1)) and
+                       (energy_history(2) > energy_history(3)) and
+                       (energy_history(2) > energy_history(4)) then
+                        detect_o <= '1';
+                        max_magnitude := max_over_preamble(shift_reg);
+                        high_threshold_r <= max_magnitude srl 1;
+                        low_threshold_r <= max_magnitude srl 3;
+                    else
+                        detect_o <= '0';
+                    end if;
                 else
                     detect_o <= '0';
                 end if;
-            else
-                detect_o <= '0';
             end if;
         end if;
     end process detect_process;
@@ -208,9 +216,11 @@ begin
     delay_process : process(clk)
     begin
         if rising_edge(clk) then
-            i_o <= i_reg(0);
-            q_o <= q_reg(0);
-            mag_sq_o <= shift_reg(BUFFER_LENGTH - PIPELINE_DELAY);
+            if ce_r = '1' then
+                i_o <= i_reg(0);
+                q_o <= q_reg(0);
+                mag_sq_o <= shift_reg(BUFFER_LENGTH - PIPELINE_DELAY);
+            end if;
         end if;
     end process delay_process;
 

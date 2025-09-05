@@ -28,6 +28,7 @@ architecture rtl of adsb_uart is
 begin
     adsb_sys: entity work.adsb port map (
         clk => clk,
+        d_vld_i => '1',
         i_i => i_r,
         q_i => q_r,
         vld_o => uart_tx_r,

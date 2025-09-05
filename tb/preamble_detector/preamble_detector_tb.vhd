@@ -22,10 +22,11 @@ begin
     clk <= not clk after clk_period / 2;
     
     uut: entity work.preamble_detector port map (
+        clk => clk,
+        ce_i => '1',
         i_i => i_i,
         q_i => q_i,
-        detect_o => detect,
-        clk => clk
+        detect_o => detect
     );
     
     main : process

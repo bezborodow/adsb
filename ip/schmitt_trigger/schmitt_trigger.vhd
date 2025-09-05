@@ -9,7 +9,7 @@ entity schmitt_trigger is
     );
     port (
         clk : in std_logic;
-        ce_i : in std_logic := '0'; -- Clock enable.
+        ce_i : in std_logic;
         schmitt_i : in unsigned(SIGNAL_WIDTH-1 downto 0) := (others => '0');
         high_threshold_i : in unsigned(SIGNAL_WIDTH-1 downto 0) := (others => '0');
         low_threshold_i : in unsigned(SIGNAL_WIDTH-1 downto 0) := (others => '0');
@@ -20,20 +20,20 @@ end schmitt_trigger;
 
 architecture rtl of schmitt_trigger is
     signal schmitt_r : std_logic := '0';
+    signal ce_r : std_logic := '0';
 begin
+    ce_r <= ce_i;
     schmitt_o <= schmitt_r;
 
     trigger_process : process(clk)
     begin
         if rising_edge(clk) then
-            if ce_i = '1' then
+            if ce_r = '1' then
                 if (schmitt_i > high_threshold_i) then
                     schmitt_r <= '1';
                 elsif (schmitt_i < low_threshold_i) then
                     schmitt_r <= '0';
                 end if;
-            else
-                schmitt_r <= '0';
             end if;
         end if;
     end process trigger_process;

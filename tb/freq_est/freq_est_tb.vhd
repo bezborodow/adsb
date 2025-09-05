@@ -30,6 +30,7 @@ begin
 
     uut: entity work.freq_est port map (
         clk => clk,
+        ce_i => '1',
         start_i => start,
         stop_i => stop,
         i_i => i,

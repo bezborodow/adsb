@@ -30,20 +30,21 @@ architecture Behavioral of ppm_demod is
     signal malformed_r : std_logic := '0';
     signal valid_r : std_logic := '0';
     signal w56_r : std_logic := '0';
-
+    signal ce_r : std_logic := '0';
 begin
 
     data_o <= data_r;
     malformed_o <= malformed_r;
     vld_o <= valid_r;
     w56_o <= w56_r;
+    ce_r <= ce_i;
 
     timing_process : process(clk)
         variable input_rising : std_logic := '0';
         variable input_falling : std_logic := '0';
     begin
         if rising_edge(clk) then
-            if ce_i = '1' then
+            if ce_r = '1' then
                 if detect_i = '1' then
                     edge_timer <= (others => '0');
                     start_demod <= '1';
@@ -80,7 +81,7 @@ begin
         variable invalid_symbol : boolean := false;
     begin
         if rising_edge(clk) then
-            if ce_i = '1' and valid_r = '0' then
+            if ce_r = '1' and valid_r = '0' then
                 if start_demod = '1' then
                     pulse_position := "1";
                     index := (others => '0');
@@ -135,7 +136,7 @@ begin
                 end if;
             end if;
 
-            if ce_i = '1' and valid_r = '1' and rdy_i = '1' then
+            if ce_r = '1' and valid_r = '1' and rdy_i = '1' then
                 valid_r <= '0';
                 data_r <= (others => '0');
                 w56_r <= '0';

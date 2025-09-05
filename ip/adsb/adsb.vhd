@@ -16,6 +16,7 @@ entity adsb is
     );
     port (
         clk : in std_logic;
+        d_vld_i : in std_logic;
         i_i : in signed(IQ_WIDTH-1 downto 0);
         q_i : in signed(IQ_WIDTH-1 downto 0);
         vld_o : out std_logic;
@@ -31,6 +32,7 @@ architecture rtl of adsb is
     -- Internal signals and registers.
     signal rdy_r : std_logic := '0';
     signal vld_r : std_logic := '0';
+    signal d_vld_r : std_logic := '0';
 
     -- Preamble detector signals.
     signal detect : std_logic := '0';
@@ -60,6 +62,7 @@ architecture rtl of adsb is
 begin
     detector: entity work.preamble_detector port map (
         clk => clk,
+        ce_i => d_vld_r,
         i_i => i_i,
         q_i => q_i,
         detect_o => detect,
@@ -77,7 +80,7 @@ begin
     )
     port map (
         clk => clk,
-        ce_i => '1',
+        ce_i => d_vld_r,
         schmitt_i => detector_mag_sq,
         high_threshold_i => high_threshold,
         low_threshold_i => low_threshold,
@@ -87,7 +90,7 @@ begin
     -- PPM demodulator.
     demod: entity work.ppm_demod port map (
         clk => clk,
-        ce_i => '1',
+        ce_i => d_vld_r,
         rdy_i => demod_rdy, -- TODO
         envelope_i => trigger_envelope,
         detect_i => detect,
@@ -100,6 +103,7 @@ begin
     -- Frequency estimator.
     freq_est: entity work.freq_est port map (
         clk => clk,
+        ce_i => d_vld_r,
         gate_i => trigger_envelope,
         start_i => detect,
         --stop_i => demod_malformed or demod_vld,
@@ -113,11 +117,14 @@ begin
     main_process : process(clk)
     begin
         if rising_edge(clk) then
-            detector_i_z1 <= detector_i;
-            detector_q_z1 <= detector_q;
+            if d_vld_r = '1' then
+                detector_i_z1 <= detector_i;
+                detector_q_z1 <= detector_q;
+            end if;
         end if;
     end process main_process;
 
+    d_vld_r <= d_vld_i;
     vld_o <= vld_r;
     rdy_r <= rdy_i;
     vld_r <= demod_vld and estimator_vld;

@@ -13,6 +13,7 @@ entity freq_est is
     );
     port (
         clk : in std_logic;
+        ce_i : in std_logic;
         i_i : in signed(IQ_WIDTH-1 downto 0);
         q_i : in signed(IQ_WIDTH-1 downto 0);
         gate_i : in std_logic;
@@ -38,16 +39,21 @@ architecture rtl of freq_est is
 
     signal vld_r : std_logic := '0';
 
+    signal ce_r : std_logic := '0';
+
 begin
     vld_o <= vld_r;
+    ce_r <= ce_i;
 
     -- Delayed signals.
     delay_process : process(clk)
     begin
         if rising_edge(clk) then
-            i_z1 <= i_i;
-            q_z1 <= q_i;
-            gate_z1 <= gate_i;
+            if ce_r = '1' then
+                i_z1 <= i_i;
+                q_z1 <= q_i;
+                gate_z1 <= gate_i;
+            end if;
         end if;
     end process delay_process;
 
@@ -66,41 +72,43 @@ begin
         end procedure reset_procedure;
     begin
         if rising_edge(clk) then
-            -- Reset on start.
-            if start_i = '1' then
-                reset_procedure;
-                enable <= '1';
-            end if;
-
-            if (gate_i = '1') and (gate_z1 = '1') and (enable = '1') then
-                if to_integer(accumulation_count) < ACCUMULATION_LENGTH then
-                    phasor_re := resize(i_i * i_z1 + q_i * q_z1, phasor_re'length);
-                    phasor_im := resize(q_i * i_z1 - i_i * q_z1, phasor_im'length);
-                    accumulator_re <= accumulator_re + resize(phasor_re, accumulator_re'length);
-                    accumulator_im <= accumulator_im + resize(phasor_im, accumulator_im'length);
-                    accumulation_count <= accumulation_count + 1;
+            if ce_r = '1' then
+                -- Reset on start.
+                if start_i = '1' then
+                    reset_procedure;
+                    enable <= '1';
                 end if;
-            end if;
 
-            -- Stop when accumulator is full.
-            if to_integer(accumulation_count) = ACCUMULATION_LENGTH-1 then
-                if enable = '1' and accumulation_count > 0 then
-                    vld_r <= '1';
+                if (gate_i = '1') and (gate_z1 = '1') and (enable = '1') then
+                    if to_integer(accumulation_count) < ACCUMULATION_LENGTH then
+                        phasor_re := resize(i_i * i_z1 + q_i * q_z1, phasor_re'length);
+                        phasor_im := resize(q_i * i_z1 - i_i * q_z1, phasor_im'length);
+                        accumulator_re <= accumulator_re + resize(phasor_re, accumulator_re'length);
+                        accumulator_im <= accumulator_im + resize(phasor_im, accumulator_im'length);
+                        accumulation_count <= accumulation_count + 1;
+                    end if;
                 end if;
-                enable <= '0';
-            end if;
 
-            -- Stop upon external stop signal.
-            if stop_i = '1' then
-                if enable = '1' and to_integer(accumulation_count) > 0 then
-                    vld_r <= '1';
+                -- Stop when accumulator is full.
+                if to_integer(accumulation_count) = ACCUMULATION_LENGTH-1 then
+                    if enable = '1' and accumulation_count > 0 then
+                        vld_r <= '1';
+                    end if;
+                    enable <= '0';
                 end if;
-                enable <= '0';
-            end if;
 
-            -- Reset when data has been read.
-            if vld_r = '1' and rdy_i = '1' then
-                reset_procedure;   
+                -- Stop upon external stop signal.
+                if stop_i = '1' then
+                    if enable = '1' and to_integer(accumulation_count) > 0 then
+                        vld_r <= '1';
+                    end if;
+                    enable <= '0';
+                end if;
+
+                -- Reset when data has been read.
+                if vld_r = '1' and rdy_i = '1' then
+                    reset_procedure;   
+                end if;
             end if;
         end if;
     end process accumulate_process;
