@@ -10,7 +10,8 @@ entity adsb_uart is
         IQ_WIDTH : integer := ADSB_IQ_WIDTH;
         SAMPLES_PER_SYMBOL : integer := ADSB_SAMPLES_PER_SYMBOL;
         PREAMBLE_BUFFER_LENGTH : integer := ADSB_PREAMBLE_BUFFER_LENGTH;
-        PREAMBLE_POSITION : adsb_int_array_t := ADSB_PREAMBLE_POSITION
+        PREAMBLE_POSITION : adsb_int_array_t := ADSB_PREAMBLE_POSITION;
+        ACCUMULATION_LENGTH : integer := 4096
     );
     port (
         clk : in std_logic;

@@ -12,7 +12,8 @@ entity adsb is
         BUFFER_LENGTH          : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
         IQ_WIDTH               : integer := ADSB_DEFAULT_IQ_WIDTH;
         PREAMBLE_POSITION      : adsb_int_array_t := ADSB_DEFAULT_PREAMBLE_POSITION;
-        PREAMBLE_BUFFER_LENGTH : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH
+        PREAMBLE_BUFFER_LENGTH : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
+        ACCUMULATION_LENGTH    : integer := 1024
     );
     port (
         clk : in std_logic;
@@ -121,7 +122,7 @@ begin
     freq_est: entity work.freq_est
         generic map (
             IQ_WIDTH => IQ_WIDTH,
-            ACCUMULATION_LENGTH => 1024
+            ACCUMULATION_LENGTH => ACCUMULATION_LENGTH
         )
         port map (
             clk => clk,
