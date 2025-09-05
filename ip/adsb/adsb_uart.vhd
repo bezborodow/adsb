@@ -35,9 +35,14 @@ architecture rtl of adsb_uart is
     signal adsb_vld: std_logic := '0';
     signal adsb_detect: std_logic := '0';
     signal led_r : std_logic := '0';
-    signal uart_tx_r : std_logic := '1';
     signal adsb_re : signed(31 downto 0) := (others => '0');
     signal adsb_im : signed(31 downto 0) := (others => '0');
+
+    -- UART signals.
+    signal uart_tx : std_logic := '1';
+    signal uart_vld : std_logic := '0';
+    signal uart_rdy : std_logic := '0';
+    signal uart_data : std_logic_vector(7 downto 0) := (others => '0');
 
 begin
     i_adsb : entity work.adsb
@@ -64,21 +69,22 @@ begin
             est_im_o => adsb_im
         );
 
-    --u_uart_tx : entity work.uart_tx
-        --generic map (
-            --CLK_DIV => 533
-        --)
-        --port map (
-            --clk => clk,
-            --vld_i => uart_vld,
-            --rdy_o => uart_rdy,
-            --data_i => uart_data,
-        --);
+    i_uart_tx : entity work.uart_tx
+        generic map (
+            CLK_DIV => 533
+        )
+        port map (
+            clk => clk,
+            vld_i => uart_vld,
+            rdy_o => uart_rdy,
+            data_i => uart_data,
+            tx_o => uart_tx
+        );
 
     i_r <= i_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
     q_r <= q_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
     d_vld_r <= d_vld_i;
-    uart_tx_o <= uart_tx_r;
+    uart_tx_o <= uart_tx;
     led_o <= led_r;
 
     main_process : process(clk)
@@ -91,10 +97,8 @@ begin
             end if;
 
             if adsb_vld = '1' then
-                -- TODO Random stuff on UART for fun.
-                if adsb_w56 = '1' and adsb_re(0) = '1' and adsb_im(0) = '0' then
-                    uart_tx_r <= '0';
-                end if;
+                uart_data <= X"54";
+                uart_vld <= '1';
             end if;
         end if;
     end process main_process;
