@@ -23,7 +23,8 @@ entity freq_est is
         stop_i : in std_logic;
         vld_o : out std_logic;
         rdy_i : in std_logic;
-        freq_o : out signed(15 downto 0)
+        est_re_o : out signed(31 downto 0);
+        est_im_o : out signed(31 downto 0)
     );
 end freq_est;
 
@@ -39,13 +40,17 @@ architecture rtl of freq_est is
     signal accumulation_count : unsigned(integer(ceil(log2(real(ACCUMULATION_LENGTH))))-1 downto 0) := (others => '0');
     signal enable : std_logic := '0';
 
+    -- Internal registers.
     signal vld_r : std_logic := '0';
-
     signal ce_r : std_logic := '0';
+    signal est_re_r : signed(31 downto 0) := (others => '0');
+    signal est_im_r : signed(31 downto 0) := (others => '0');
 
 begin
     vld_o <= vld_r;
     ce_r <= ce_i;
+    est_re_o <= est_re_r;
+    est_im_o <= est_im_r;
 
     -- Delayed signals.
     delay_process : process(clk)
@@ -94,6 +99,9 @@ begin
                 -- Stop when accumulator is full.
                 if to_integer(accumulation_count) = ACCUMULATION_LENGTH-1 then
                     if enable = '1' and accumulation_count > 0 then
+                        -- Resize to a smaller complex number.
+                        est_re_r <= resize(shift_right(accumulator_re, accumulator_re'length - est_re_r'length), est_re_r'length);
+                        est_im_r <= resize(shift_right(accumulator_im, accumulator_im'length - est_im_r'length), est_im_r'length);
                         vld_r <= '1';
                     end if;
                     enable <= '0';

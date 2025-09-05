@@ -33,6 +33,8 @@ architecture rtl of adsb_uart is
     signal adsb_detect: std_logic := '0';
     signal led_r : std_logic := '0';
     signal uart_tx_r : std_logic := '1';
+    signal adsb_re : signed(31 downto 0) := (others => '0');
+    signal adsb_im : signed(31 downto 0) := (others => '0');
 
 begin
     adsb_sys: entity work.adsb port map (
@@ -44,9 +46,10 @@ begin
         detect_o => adsb_detect,
         rdy_i => '0',
         data_o => adsb_data,
-        w56_o => adsb_w56
+        w56_o => adsb_w56,
+        est_re_o => adsb_re,
+        est_im_o => adsb_im
     );
-    
 
     i_r <= i_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
     q_r <= q_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
@@ -61,6 +64,13 @@ begin
                 -- Turn on LED if a valid ADS-B message was detected.
                 -- TODO maybe put this on a timer.
                 led_r <= '1';
+            end if;
+
+            if adsb_vld = '1' then
+                -- TODO Random stuff on UART for fun.
+                if adsb_w56 = '1' and adsb_re(0) = '1' and adsb_im(0) = '0' then
+                    uart_tx_r <= '0';
+                end if;
             end if;
         end if;
     end process main_process;

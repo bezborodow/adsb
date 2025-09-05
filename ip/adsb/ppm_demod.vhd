@@ -120,6 +120,7 @@ begin
                                 invalid_symbol := true;
                             end if;
                             if not invalid_symbol then
+                                -- TODO This should be a shift register.
                                 data_r(to_integer(index)) <= sample;
                                 if index = 111 then
                                     valid_r <= '1';

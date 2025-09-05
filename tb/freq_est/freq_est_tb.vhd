@@ -23,7 +23,8 @@ architecture test of freq_est_tb is
     signal gate : std_logic := '0';
     signal vld : std_logic := '0';
     signal rdy : std_logic := '0';
-    signal freq : signed(15 downto 0) := (others => '0');
+    signal est_re : signed(31 downto 0) := (others => '0');
+    signal est_im : signed(31 downto 0) := (others => '0');
 
 begin
     clk <= not clk after clk_period / 2;
@@ -38,7 +39,8 @@ begin
         gate_i => gate,
         vld_o => vld,
         rdy_i => rdy,
-        freq_o => freq
+        est_re_o => est_re,
+        est_im_o => est_im
     );
 
     main : process

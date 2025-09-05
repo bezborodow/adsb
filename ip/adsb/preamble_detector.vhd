@@ -15,9 +15,9 @@ use work.adsb_pkg.all;
 entity preamble_detector is
     generic (
         SAMPLES_PER_SYMBOL    : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
-        BUFFER_LENGTH         : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
         IQ_WIDTH              : integer := ADSB_DEFAULT_IQ_WIDTH;
         MAGNITUDE_WIDTH       : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1;
+        BUFFER_LENGTH         : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
         PREAMBLE_POSITION     : adsb_int_array_t := ADSB_DEFAULT_PREAMBLE_POSITION
     );
     port (

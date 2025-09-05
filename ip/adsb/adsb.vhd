@@ -8,8 +8,11 @@ use work.adsb_pkg.all;
 
 entity adsb is
     generic (
-        SAMPLES_PER_SYMBOL : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
-        IQ_WIDTH : integer := ADSB_DEFAULT_IQ_WIDTH
+        SAMPLES_PER_SYMBOL     : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
+        BUFFER_LENGTH          : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
+        IQ_WIDTH               : integer := ADSB_DEFAULT_IQ_WIDTH;
+        PREAMBLE_POSITION      : adsb_int_array_t := ADSB_DEFAULT_PREAMBLE_POSITION;
+        PREAMBLE_BUFFER_LENGTH : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH
     );
     port (
         clk : in std_logic;
@@ -20,7 +23,9 @@ entity adsb is
         detect_o : out std_logic;
         rdy_i : in std_logic;
         w56_o : out std_logic;
-        data_o : out std_logic_vector(111 downto 0)
+        data_o : out std_logic_vector(111 downto 0);
+        est_re_o : out signed(31 downto 0);
+        est_im_o : out signed(31 downto 0)
     );
 end adsb;
 
@@ -49,6 +54,8 @@ architecture rtl of adsb is
     signal estimator_en : std_logic := '0';
     signal estimator_vld : std_logic := '0';
     signal estimator_rdy : std_logic := '0';
+    signal estimator_re : signed(31 downto 0) := (others => '0');
+    signal estimator_im : signed(31 downto 0) := (others => '0');
 
     -- Pulse-position modulation (PPM) demodulator signals.
     signal demod_malformed : std_logic := '0';
@@ -58,59 +65,78 @@ architecture rtl of adsb is
     signal demod_data : std_logic_vector(111 downto 0) := (others => '0');
  
 begin
-    detector: entity work.preamble_detector port map (
-        clk => clk,
-        ce_i => d_vld_r,
-        i_i => i_i,
-        q_i => q_i,
-        detect_o => detect,
-        high_threshold_o => high_threshold,
-        low_threshold_o => low_threshold,
+    detector: entity work.preamble_detector 
+        generic map (
+            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL,
+            IQ_WIDTH           => IQ_WIDTH,
+            MAGNITUDE_WIDTH    => MAGNITUDE_WIDTH,
+            BUFFER_LENGTH      => PREAMBLE_BUFFER_LENGTH,
+            PREAMBLE_POSITION  => ADSB_DEFAULT_PREAMBLE_POSITION
+        )
+        port map (
+            clk => clk,
+            ce_i => d_vld_r,
+            i_i => i_i,
+            q_i => q_i,
+            detect_o => detect,
+            high_threshold_o => high_threshold,
+            low_threshold_o => low_threshold,
 
-        i_o => detector_i,
-        q_o => detector_q,
-        mag_sq_o => detector_mag_sq
-    );
+            i_o => detector_i,
+            q_o => detector_q,
+            mag_sq_o => detector_mag_sq
+        );
     
     trigger: entity work.schmitt_trigger
-    generic map (
-        SIGNAL_WIDTH => MAGNITUDE_WIDTH
-    )
-    port map (
-        clk => clk,
-        ce_i => d_vld_r,
-        schmitt_i => detector_mag_sq,
-        high_threshold_i => high_threshold,
-        low_threshold_i => low_threshold,
-        schmitt_o => trigger_envelope
-    );
+        generic map (
+            SIGNAL_WIDTH => MAGNITUDE_WIDTH
+        )
+        port map (
+            clk => clk,
+            ce_i => d_vld_r,
+            schmitt_i => detector_mag_sq,
+            high_threshold_i => high_threshold,
+            low_threshold_i => low_threshold,
+            schmitt_o => trigger_envelope
+        );
 
     -- PPM demodulator.
-    demod: entity work.ppm_demod port map (
-        clk => clk,
-        ce_i => d_vld_r,
-        rdy_i => demod_rdy, -- TODO
-        envelope_i => trigger_envelope,
-        detect_i => detect,
-        vld_o => demod_vld,
-        data_o => demod_data,
-        w56_o => demod_w56,
-        malformed_o => demod_malformed
-    );
+    demod: entity work.ppm_demod
+        generic map (
+            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL
+        )
+        port map (
+            clk => clk,
+            ce_i => d_vld_r,
+            rdy_i => demod_rdy, -- TODO
+            envelope_i => trigger_envelope,
+            detect_i => detect,
+            vld_o => demod_vld,
+            data_o => demod_data,
+            w56_o => demod_w56,
+            malformed_o => demod_malformed
+        );
 
     -- Frequency estimator.
-    freq_est: entity work.freq_est port map (
-        clk => clk,
-        ce_i => d_vld_r,
-        gate_i => trigger_envelope,
-        start_i => detect,
-        --stop_i => demod_malformed or demod_vld,
-        stop_i => '0', -- TODO
-        i_i => detector_i_z1,
-        q_i => detector_q_z1,
-        rdy_i => estimator_rdy,
-        vld_o => estimator_vld
-    );
+    freq_est: entity work.freq_est
+        generic map (
+            IQ_WIDTH => IQ_WIDTH,
+            ACCUMULATION_LENGTH => 1024
+        )
+        port map (
+            clk => clk,
+            ce_i => d_vld_r,
+            gate_i => trigger_envelope,
+            start_i => detect,
+            --stop_i => demod_malformed or demod_vld,
+            stop_i => '0', -- TODO
+            i_i => detector_i_z1,
+            q_i => detector_q_z1,
+            rdy_i => estimator_rdy,
+            vld_o => estimator_vld,
+            est_re_o => estimator_re,
+            est_im_o => estimator_im
+        );
 
     main_process : process(clk)
     begin
@@ -129,6 +155,8 @@ begin
     vld_r <= demod_vld and estimator_vld;
     demod_rdy <= vld_r and rdy_r;
     estimator_rdy <= vld_r and rdy_r;
+    est_re_o <= estimator_re;
+    est_im_o <= estimator_im;
 
     rdyvld_handshake_process : process(clk)
     begin
