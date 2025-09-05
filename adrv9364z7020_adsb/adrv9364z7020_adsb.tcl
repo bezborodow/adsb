@@ -15,6 +15,7 @@ add_files -fileset sources_1 -norecurse ../ip/adsb/ppm_demod.vhd
 add_files -fileset sources_1 -norecurse ../ip/freq_est/freq_est.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_uart.vhd
+add_files -fileset sources_1 -norecurse ../ip/uart/uart_tx.vhd
 
 import_files -force -norecurse
 update_compile_order -fileset sources_1

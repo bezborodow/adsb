@@ -14,7 +14,7 @@ entity uart_tx is
         clk : in std_logic;
         vld_i : in std_logic;
         rdy_o : out std_logic;
-        data_i : out std_logic_vector(DATA_WIDTH-1 downto 0);
+        data_i : in std_logic_vector(DATA_WIDTH-1 downto 0);
         tx_o : out std_logic
     );
 end uart_tx;
