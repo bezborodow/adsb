@@ -11,9 +11,11 @@ entity adsb_uart is
     );
     port (
         clk : in std_logic;
-        i_i : in signed(RX_IQ_WIDTH-1 downto 0);
-        q_i : in signed(RX_IQ_WIDTH-1 downto 0);
-        uart_tx_o : out std_logic
+        d_vld_i : in std_logic; -- In-phase quadrature (IQ) data is valid.
+        i_i : in signed(RX_IQ_WIDTH-1 downto 0); -- In-phase sample.
+        q_i : in signed(RX_IQ_WIDTH-1 downto 0); -- Quadrature sample.
+        uart_tx_o : out std_logic; -- UART transmission port.
+        led_o : out std_logic -- Activity indicator LED GPIO.
     );
 end adsb_uart;
 
@@ -24,11 +26,12 @@ architecture rtl of adsb_uart is
     signal adsb_data : std_logic_vector(111 downto 0) := (others => '0');
     signal i_r : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal q_r : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal d_vld_r : std_logic := '0';
 
 begin
     adsb_sys: entity work.adsb port map (
         clk => clk,
-        d_vld_i => '1',
+        d_vld_i => d_vld_r,
         i_i => i_r,
         q_i => q_r,
         vld_o => uart_tx_r,
@@ -37,6 +40,7 @@ begin
         w56_o => adsb_w56
     );
 
+    d_vld_r <= d_vld_i;
 
     i_r <= i_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
     q_r <= q_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
