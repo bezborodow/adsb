@@ -1,3 +1,8 @@
+Decompile:
+
+    cd zynq-adrv9364-z7020-bob/lvds
+    dtc -I dtb -O dts -o devicetree.dts devicetree.dtb
+
 Change status from disabled to okay:
 
         serial@e0001000 {
@@ -19,3 +24,7 @@ Add an alias for the PL UART serial connection, serial1:
         phandle = <0x3c>;
     };
 
+Recompile and copy to /boot
+
+    dtc -I dts -O dtb -o devicetree_uart_en.dtb devicetree.dts
+    cp devicetree_uart_en.dtb ../../devicetree.dts
