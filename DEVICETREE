@@ -1,0 +1,21 @@
+Change status from disabled to okay:
+
+        serial@e0001000 {
+            compatible = "xlnx,xuartps\0cdns,uart-r1p8";
+            status = "okay";
+            clocks = <0x02 0x18 0x02 0x29>;
+            clock-names = "uart_clk\0pclk";
+            reg = <0xe0001000 0x1000>;
+            interrupts = <0x00 0x32 0x04>;
+            phandle = <0x24>;
+        };
+
+Add an alias for the PL UART serial connection, serial1:
+
+    aliases {
+        ethernet0 = "/axi/ethernet@e000b000";
+        serial0 = "/axi/serial@e0001000";
+        serial1 = "/axi/serial@e0000000"; /* PL connection */
+        phandle = <0x3c>;
+    };
+
