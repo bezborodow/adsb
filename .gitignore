@@ -18,3 +18,4 @@ xgui
 vunit_out
 *.ghw
 *.gtkw
+*.xsa
