@@ -15,5 +15,5 @@ source /opt/Xilinx/Vivado/2023.2/settings64.sh
 
 ```
 iio_attr -c ad9361-phy voltage0 sampling_frequency 61440000
-iio_attr -c ad9361-phy altvoltage1 frequency 1091000000
+iio_attr -c ad9361-phy altvoltage0 frequency 1091000000
 ```
