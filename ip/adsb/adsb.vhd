@@ -140,16 +140,6 @@ begin
             est_im_o => estimator_im
         );
 
-    main_process : process(clk)
-    begin
-        if rising_edge(clk) then
-            if d_vld_r = '1' then
-                detector_i_z1 <= detector_i;
-                detector_q_z1 <= detector_q;
-            end if;
-        end if;
-    end process main_process;
-
     d_vld_r <= d_vld_i;
     vld_o <= vld_r;
     detect_o <= detect;
@@ -159,6 +149,18 @@ begin
     estimator_rdy <= vld_r and rdy_r;
     est_re_o <= estimator_re;
     est_im_o <= estimator_im;
+    data_o <= demod_data;
+    w56_o <= demod_w56;
+
+    main_process : process(clk)
+    begin
+        if rising_edge(clk) then
+            if d_vld_r = '1' then
+                detector_i_z1 <= detector_i;
+                detector_q_z1 <= detector_q;
+            end if;
+        end if;
+    end process main_process;
 
     rdyvld_handshake_process : process(clk)
     begin
