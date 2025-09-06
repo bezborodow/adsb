@@ -8,5 +8,13 @@ Under wiki-scripts:
 
 ```
 source /opt/Xilinx/Vivado/2023.2/settings64.sh
-./build_boot_bin.sh ~/src/adsb/adrv9364z7020_adsb/adrv9364z7020_adsb.sdk/system_top.xsa adrv_lvds/u-boot_zynq_adrv9361.elf
+./build_boot_bin.sh ~/src/adsb/adrv9364z7020_adsb/system_top.xsa adrv_lvds/u-boot_zynq_adrv9361.elf
 ```
+
+## Setting Sampling Frequency
+
+```
+iio_attr -c ad9361-phy voltage0 sampling_frequency 61440000
+```
+
+TODO: also tune to carrier 1090 MHz.

@@ -28,14 +28,18 @@ end adsb_uart;
 
 architecture rtl of adsb_uart is
 
-    signal adsb_w56 : std_logic := '0';
-    signal adsb_data : std_logic_vector(111 downto 0) := (others => '0');
+    -- Internal registers.
     signal i_r : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal q_r : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal d_vld_r : std_logic := '0';
-    signal adsb_vld: std_logic := '0';
-    signal adsb_detect: std_logic := '0';
     signal led_r : std_logic := '0';
+
+    -- ADSB demodalator and frequency estimator signals.
+    signal adsb_detect: std_logic := '0';
+    signal adsb_vld: std_logic := '0';
+    signal adsb_rdy: std_logic := '0';
+    signal adsb_w56 : std_logic := '0';
+    signal adsb_data : std_logic_vector(111 downto 0) := (others => '0');
     signal adsb_re : signed(31 downto 0) := (others => '0');
     signal adsb_im : signed(31 downto 0) := (others => '0');
 
@@ -67,7 +71,7 @@ begin
             q_i => q_r,
             vld_o => adsb_vld,
             detect_o => adsb_detect,
-            rdy_i => '0',
+            rdy_i => adsb_rdy,
             data_o => adsb_data,
             w56_o => adsb_w56,
             est_re_o => adsb_re,
@@ -107,11 +111,13 @@ begin
 
             -- TODO Test UART.
             uart_vld <= '0';
-            if uart_rdy = '1' then
+            adsb_rdy <= '0';
+            if uart_rdy = '1' and adsb_vld = '1' then
                 if uart_timer = UART_TIMER_MAX-1 then
                     uart_data <= X"4D";
                     uart_vld <= '1';
                     uart_timer <= 0;
+                    adsb_rdy <= '1';
                 else
                     uart_timer <= uart_timer + 1;
                     uart_vld <= '0';
