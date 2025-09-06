@@ -13,7 +13,8 @@ entity adsb_uart is
         PREAMBLE_POSITION1 : integer := 61;
         PREAMBLE_POSITION2 : integer := 215;
         PREAMBLE_POSITION3 : integer := 276;
-        ACCUMULATION_LENGTH : integer := 4096
+        ACCUMULATION_LENGTH : integer := 4096;
+        UART_CLK_DIV : integer := 533
     );
     port (
         clk : in std_logic;
@@ -44,6 +45,10 @@ architecture rtl of adsb_uart is
     signal uart_rdy : std_logic := '0';
     signal uart_data : std_logic_vector(7 downto 0) := (others => '0');
 
+    -- TODO Test signals.
+    constant UART_TIMER_MAX : positive := 100000;
+    signal uart_timer : natural range 0 to UART_TIMER_MAX-1 := UART_TIMER_MAX-1;
+
 begin
     i_adsb : entity work.adsb
         generic map (
@@ -71,7 +76,7 @@ begin
 
     i_uart_tx : entity work.uart_tx
         generic map (
-            CLK_DIV => 533
+            CLK_DIV => UART_CLK_DIV
         )
         port map (
             clk => clk,
@@ -97,8 +102,22 @@ begin
             end if;
 
             if adsb_vld = '1' then
-                uart_data <= X"54";
-                uart_vld <= '1';
+                -- Handle valid data.
+            end if;
+
+            -- TODO Test UART.
+            uart_vld <= '0';
+            if uart_rdy = '1' then
+                if uart_timer = UART_TIMER_MAX-1 then
+                    uart_data <= X"4D";
+                    uart_vld <= '1';
+                    uart_timer <= 0;
+                else
+                    uart_timer <= uart_timer + 1;
+                    uart_vld <= '0';
+                end if;
+            else
+                uart_timer <= 0;
             end if;
         end if;
     end process main_process;
