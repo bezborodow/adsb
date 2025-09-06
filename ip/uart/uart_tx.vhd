@@ -32,7 +32,8 @@ architecture rtl of uart_tx is
     signal tx_r : std_logic := '1';
 
     -- Shift-out and data signals.
-    constant SHIFT_OUT_WIDTH : positive := DATA_WIDTH + 4; -- Start, parity, and 2 stop bits.
+    --constant SHIFT_OUT_WIDTH : positive := DATA_WIDTH + 4; -- Start, parity, and 2 stop bits.
+    constant SHIFT_OUT_WIDTH : positive := DATA_WIDTH + 3; -- Start and 2 stop bits.
     signal shift_out : std_logic_vector(SHIFT_OUT_WIDTH-1 downto 0) := (others => '0');
     signal shift_counter : natural range 0 to SHIFT_OUT_WIDTH-1 := 0;
 
@@ -57,12 +58,13 @@ begin
 
     -- Receive more data when ready and valid.
     tx_process : process(clk)
-        variable parity : std_logic := '0';
+        --variable parity : std_logic := '0';
     begin
         if rising_edge(clk) then
             if rdy_r = '1' and vld_r = '1' then
-                parity := xor_reduce(data_r);
-                shift_out <= "11" & parity & data_r & "0";
+                --parity := xor_reduce(data_r);
+                --shift_out <= "11" & parity & data_r & "0";
+                shift_out <= "11" & data_r & "0";
                 rdy_r <= '0';
                 shift_counter <= 0;
             end if;
@@ -77,9 +79,8 @@ begin
                 tx_r <= shift_out(0);
                 shift_out <= std_logic_vector(shift_right(unsigned(shift_out), 1));
 
-                -- 11 stop
                 -- 10 stop
-                -- 9 parity
+                -- 9 stop
                 -- 8 D7
                 -- 7 
                 -- 6
