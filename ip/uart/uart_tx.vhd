@@ -3,7 +3,6 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
 use ieee.std_logic_misc.xor_reduce;
-use work.adsb_pkg.all;
 
 entity uart_tx is
     generic (
@@ -43,12 +42,13 @@ architecture rtl of uart_tx is
     signal queued_data : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
 
 begin
+    -- Internal registers.
     vld_r <= vld_i;
     rdy_o <= rdy_r;
     data_r <= data_i;
     tx_o <= tx_r;
 
-    -- Combinatorial logic.
+    -- Ready when no data is queued and when not busy sending.
     rdy_r <= '1' when (pending = '0' and sending = '0') else '0';
 
     -- Set up the baud rate as a strobe controlled by a timer.
@@ -69,12 +69,15 @@ begin
     data_handshake_process : process(clk)
     begin
         if rising_edge(clk) then
+            -- Accept data only when ready and there is valid data.
             if rdy_r = '1' and vld_r = '1' then
                 queued_data <= data_r;
                 pending <= '1';
             end if;
 
             -- Transmission process should acknowledge the queued data and begin sending.
+            -- When the transmission begins, then the pending flag is no longer required
+            -- to be high.
             if pending = '1' and sending = '1' then
                 pending <= '0';
             end if;

@@ -39,6 +39,9 @@ lib.add_source_files("tb/uart_tx/*.vhd")
 tb = lib.test_bench("uart_tx_tb")
 tb.set_sim_option("ghdl.sim_flags", ["--wave=uart_tx_tb.ghw"])
 
+lib.add_source_files("tb/uart_tx_enc/*.vhd")
+tb = lib.test_bench("uart_tx_enc_tb")
+tb.set_sim_option("ghdl.sim_flags", ["--wave=uart_tx_enc_tb.ghw"])
 
 # PPM Demod. Has different test cases, so need to add their own wave files.
 lib.add_source_files("tb/ppm_demod/*.vhd")

@@ -28,7 +28,8 @@ begin
 
     uut : entity work.uart_tx
         generic map (
-            CLK_DIV => UART_CLK_DIV
+            CLK_DIV => UART_CLK_DIV,
+            DATA_WIDTH => UART_DATA_WIDTH
         )
         port map (
             clk => clk,
