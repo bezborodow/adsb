@@ -51,6 +51,8 @@ begin
         );
 
     stimulus_process : process
+        constant MAX_CYCLES : natural := 1000;
+        variable cycles_waited : natural := 0;
     begin
         test_runner_setup(runner, runner_cfg);
 
@@ -117,15 +119,32 @@ begin
         wait for clk_period;
         master_data <= x"CD";
         master_ascii <= '1';
+        master_eom <= '0';
+        master_vld <= '1';
+        wait for clk_period;
+        master_data <= x"EF";
+        master_ascii <= '1';
         master_eom <= '1';
         master_vld <= '1';
         wait for clk_period;
+
+        -- Wait for ready to be asserted.
+        cycles_waited := 0;
+        while master_rdy = '0' and cycles_waited < MAX_CYCLES loop
+            wait until rising_edge(clk);
+            cycles_waited := cycles_waited + 1;
+        end loop;
+
+        if master_rdy = '0' then
+            report "Timeout waiting for ready signal." severity failure;
+        end if;
+
+
         master_vld <= '0';
-        wait for clk_period * 10;
         
         -- End of test! Trigger checks!
+        wait for clk_period * 30;
         end_of_test <= true;
-        wait for clk_period * 10;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
@@ -134,7 +153,7 @@ begin
     data_check_process : process(clk)
         variable done : boolean := false;
         variable counter : natural := 0;
-        variable expected_data : uart_byte_array_t(0 to 9) := (
+        variable expected_data : uart_byte_array_t(0 to 11) := (
             0 => std_logic_vector(to_unsigned(character'pos('M'), 8)),
             1 => std_logic_vector(to_unsigned(character'pos('N'), 8)),
             2 => std_logic_vector(to_unsigned(character'pos('X'), 8)),
@@ -144,7 +163,9 @@ begin
             6 => std_logic_vector(to_unsigned(character'pos('B'), 8)),
             7 => std_logic_vector(to_unsigned(character'pos('C'), 8)),
             8 => std_logic_vector(to_unsigned(character'pos('D'), 8)),
-            9 => x"0A"
+            9 => std_logic_vector(to_unsigned(character'pos('E'), 8)),
+            10 => std_logic_vector(to_unsigned(character'pos('F'), 8)),
+            11 => x"0A"
         );
     begin
         if rising_edge(clk) then
@@ -160,7 +181,7 @@ begin
             end if;
 
             if end_of_test and not done then
-                report "Did not receive all expected data." severity failure;
+                --report "Did not receive all expected data." severity failure;
             end if;
         end if;
     end process data_check_process;

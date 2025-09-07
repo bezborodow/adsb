@@ -101,13 +101,16 @@ begin
                 if buffer_ready = '0' then
                     m_rdy_c <= '0';
                 end if;
+
+                if encoder_buffer(1) /= x"00" and m_rdy_c = '1' and m_vld_c = '1' then
+                    m_rdy_c <= '0';
+                end if;
             end if;
         end if;
     end process encoder_process;
 
     -- The sender reads from the buffer and passes it to the UART transmitter slave.
     sender_process : process(clk)
-        variable buffer_available : boolean := false;
     begin
         if rising_edge(clk) then
             if s_vld_c = '1' and s_rdy_c = '1' then
