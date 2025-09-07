@@ -71,6 +71,7 @@ begin
             if buffer_valid = '1' and buffer_ready = '1' then
                 buffer_valid <= '0';
                 m_rdy_c <= '1';
+                encoder_buffer <= (others => x"00");
             end if;
 
             if m_vld_c = '1' and m_rdy_c = '1' then
@@ -82,7 +83,7 @@ begin
                     if m_eom_c = '1' then
                         encoder_buffer(2) <= ASCII_NEWLINE;
                     else
-                        encoder_buffer(2) <= (others => '0');
+                        encoder_buffer(2) <= x"00";
                     end if;
                 else
                     -- Binary mode.
@@ -90,9 +91,9 @@ begin
                     if m_eom_c = '1' then
                         encoder_buffer(1) <= ASCII_NEWLINE;
                     else
-                        encoder_buffer(1) <= (others => '0');
+                        encoder_buffer(1) <= x"00";
                     end if;
-                    encoder_buffer(2) <= (others => '0');
+                    encoder_buffer(2) <= x"00";
                 end if;
                 buffer_valid <= '1';
 
@@ -102,7 +103,7 @@ begin
                     m_rdy_c <= '0';
                 end if;
 
-                if encoder_buffer(1) /= x"00" and m_rdy_c = '1' and m_vld_c = '1' then
+                if encoder_buffer(1) /= x"00" and m_vld_c = '1' then
                     m_rdy_c <= '0';
                 end if;
             end if;
@@ -116,6 +117,7 @@ begin
             if s_vld_c = '1' and s_rdy_c = '1' then
                 if sender_buffer(1) = x"00" then
                     s_vld_c <= '0';
+                    sender_buffer(0) <= x"00";
                     buffer_ready <= '1';
                 else
                     sender_buffer(0) <= sender_buffer(1);
