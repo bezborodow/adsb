@@ -33,7 +33,7 @@ end uart_tx_enc;
 
 architecture rtl of uart_tx_enc is
     constant MAX_FRAMES : positive := 3; -- Maximum number of frames is two ASCII octets terminated with a newline.
-    constant ASCII_NEWLINE : std_logic_vector(7 downto 0) := X"0A";
+    constant ASCII_NEWLINE : std_logic_vector(7 downto 0) := x"0A";
 
     -- Combinatorial internal signals.
     signal m_vld_c : std_logic := '0';
@@ -46,9 +46,8 @@ architecture rtl of uart_tx_enc is
     signal s_data_c : std_logic_vector(7 downto 0) := (others => '0');
 
     -- Buffer signals.
-    type frame_buffer_t is array (natural range <>) of std_logic_vector(7 downto 0);
-    signal encoder_buffer : frame_buffer_t(0 to MAX_FRAMES-1) := (others => (others => '0'));
-    signal sender_buffer : frame_buffer_t(0 to MAX_FRAMES-1) := (others => (others => '0'));
+    signal encoder_buffer : uart_byte_array_t(0 to MAX_FRAMES-1) := (others => (others => '0'));
+    signal sender_buffer : uart_byte_array_t(0 to MAX_FRAMES-1) := (others => (others => '0'));
     signal buffer_valid : std_logic := '0';
     signal buffer_ready : std_logic := '1';
 

@@ -6,6 +6,8 @@ package uart_pkg is
     function uart_ascii_hex(
         n : std_logic_vector(3 downto 0)
     ) return std_logic_vector;
+
+    type uart_byte_array_t is array (natural range <>) of std_logic_vector(7 downto 0);
 end package uart_pkg;
 
 package body uart_pkg is

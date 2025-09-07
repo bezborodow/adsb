@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
+use work.uart_pkg.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
 
@@ -25,6 +26,8 @@ architecture test of uart_tx_enc_tb is
     signal slave_rdy : std_logic := '0';
     signal slave_data : std_logic_vector(7 downto 0) := (others => '0');
 
+    signal end_of_test : boolean := false;
+
     procedure wait_for_clock_cycles(signal clock : std_logic; n : natural) is
     begin
       for i in 1 to n loop
@@ -47,7 +50,7 @@ begin
             s_data_o => slave_data
         );
 
-    main : process
+    stimulus_process : process
     begin
         test_runner_setup(runner, runner_cfg);
 
@@ -119,8 +122,46 @@ begin
         wait for clk_period;
         master_vld <= '0';
         wait for clk_period * 10;
+        
+        -- End of test! Trigger checks!
+        end_of_test <= true;
+        wait for clk_period * 10;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
-    end process main;
+    end process stimulus_process;
+
+    data_check_process : process(clk)
+        variable done : boolean := false;
+        variable counter : natural := 0;
+        variable expected_data : uart_byte_array_t(0 to 9) := (
+            0 => std_logic_vector(to_unsigned(character'pos('M'), 8)),
+            1 => std_logic_vector(to_unsigned(character'pos('N'), 8)),
+            2 => std_logic_vector(to_unsigned(character'pos('X'), 8)),
+            3 => std_logic_vector(to_unsigned(character'pos('Y'), 8)),
+            4 => std_logic_vector(to_unsigned(character'pos('Z'), 8)),
+            5 => std_logic_vector(to_unsigned(character'pos('A'), 8)),
+            6 => std_logic_vector(to_unsigned(character'pos('B'), 8)),
+            7 => std_logic_vector(to_unsigned(character'pos('C'), 8)),
+            8 => std_logic_vector(to_unsigned(character'pos('D'), 8)),
+            9 => x"0A"
+        );
+    begin
+        if rising_edge(clk) then
+            if slave_vld = '1' and slave_rdy = '1' and not done then
+                assert slave_data = expected_data(counter)
+                report "Mismatch: expected=" & character'val(to_integer(unsigned(expected_data(counter)))) & " got=" & character'val(to_integer(unsigned(slave_data)))
+                severity failure;
+
+                counter := counter + 1;
+                if counter = expected_data'length then
+                    done := true;
+                end if;
+            end if;
+
+            if end_of_test and not done then
+                report "Did not receive all expected data." severity failure;
+            end if;
+        end if;
+    end process data_check_process;
 end test;
