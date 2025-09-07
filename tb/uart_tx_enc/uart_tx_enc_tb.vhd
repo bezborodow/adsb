@@ -104,9 +104,21 @@ begin
         wait for clk_period;
 
         master_vld <= '0';
-        wait for clk_period * 10;
+        wait for clk_period * 20;
 
         -- Send some numbers (converted to ASCII with newlines.)
+        master_data <= x"AB";
+        master_ascii <= '1';
+        master_eom <= '0';
+        master_vld <= '1';
+        wait for clk_period;
+        master_data <= x"CD";
+        master_ascii <= '1';
+        master_eom <= '1';
+        master_vld <= '1';
+        wait for clk_period;
+        master_vld <= '0';
+        wait for clk_period * 10;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
