@@ -35,6 +35,7 @@ entity uart_tx_enc is
 end uart_tx_enc;
 
 architecture rtl of uart_tx_enc is
+    constant MAX_FRAMES : positive := 3; -- Maximum number of frames is two ASCII octets terminated with a newline.
 
     -- Internal registers.
     signal m_vld_r : std_logic := '0';
@@ -45,6 +46,11 @@ architecture rtl of uart_tx_enc is
     signal s_vld_r : std_logic := '0';
     signal s_rdy_r : std_logic := '0';
     signal s_data_r : std_logic_vector(DATA_WIDTH-1 downto 0) := (others => '0');
+
+    -- Buffer signals.
+    type frame_buffer_t is array (natural range <>) of std_logic_vector(DATA_WIDTH-1 downto 0);
+    signal frame_buffer : frame_buffer_t(0 to MAX_FRAMES-1) := (others => (others => '0'));
+    signal buffer_ready : std_logic := '1';
 
 begin
     -- Internal registers.
@@ -57,9 +63,17 @@ begin
     s_rdy_r <= s_rdy_i;
     s_data_o <= s_data_r;
 
-    encoder_process : process(clk)
+    buffer_encoder_process : process(clk)
+    begin
+        if rising_edge(clk) then
+            if buffer_ready = '1' then
+            end if;
+        end if;
+    end process buffer_encoder_process;
+
+    sender_process : process(clk)
     begin
         if rising_edge(clk) then
         end if;
-    end process encoder_process;
+    end process sender_process;
 end rtl;
