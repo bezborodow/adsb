@@ -77,8 +77,8 @@ begin
         if rising_edge(clk) then
             sm_fifo_n := sm_fifo;
 
-            wr_en_v := (wr_vld_i = '1') and (wr_rdy_c = '1'); -- TODO cannot read from 'out' object
-            rd_en_v := (rd_vld_c = '1') and (rd_rdy_i = '1'); -- TODO cannot read from 'out' object
+            wr_en_v := (wr_vld_i = '1') and (wr_rdy_c = '1');
+            rd_en_v := (rd_vld_c = '1') and (rd_rdy_i = '1');
 
             -- Determine FIFO state (latching.)
             if wr_en_v and not rd_en_v then
