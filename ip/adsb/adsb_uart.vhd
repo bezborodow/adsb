@@ -114,7 +114,7 @@ begin
         port map (
             clk        => clk,
             rst        => '0',
-            wr_data_i => adsb_w56 & std_logic_vector(adsb_im) & std_logic_vector(adsb_re) & adsb_data,
+            wr_data_i  => adsb_w56 & std_logic_vector(adsb_im) & std_logic_vector(adsb_re) & adsb_data,
             wr_vld_i   => adsb_vld,
             wr_rdy_o   => adsb_rdy,
             rd_data_o  => fifo_rd_data,
