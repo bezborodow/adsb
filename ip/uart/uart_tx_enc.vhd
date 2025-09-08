@@ -134,7 +134,7 @@ begin
                 -- The buffer will be available on the next cycle if the slave is
                 -- ready and the buffer will be empty afterwards. Or if the buffer
                 -- is already empty.
-                if (s_rdy_c = '1' and encoder_buffer(1) = x"00") then
+                if (s_rdy_c = '1' and encoder_buffer(1) = x"00" and sender_buffer(1) = x"00") then
                     buffer_ready <= '1';
                 else
                     buffer_ready <= '0';
