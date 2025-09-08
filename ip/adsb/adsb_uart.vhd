@@ -28,6 +28,10 @@ end adsb_uart;
 
 architecture rtl of adsb_uart is
 
+    -- FIFO parameters.
+    constant ADSB_FIFO_WIDTH : integer := 177;
+    constant ADSB_FIFO_DEPTH : integer := 4;
+
     -- Internal registers.
     signal i_r : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal q_r : signed(IQ_WIDTH-1 downto 0) := (others => '0');
@@ -48,6 +52,11 @@ architecture rtl of adsb_uart is
     signal uart_vld : std_logic := '0';
     signal uart_rdy : std_logic := '0';
     signal uart_data : std_logic_vector(7 downto 0) := (others => '0');
+
+    -- FIFO Read side signals.
+    signal fifo_rd_data  : std_logic_vector(ADSB_FIFO_WIDTH-1 downto 0);
+    signal fifo_rd_vld   : std_logic := '0';
+    signal fifo_rd_rdy   : std_logic := '0';
 
     -- TODO Test signals.
     constant UART_TIMER_MAX : positive := 100000;
@@ -90,6 +99,22 @@ begin
             tx_o => uart_tx
         );
 
+    i_adsb_fifo : entity work.adsb_fifo
+        generic map (
+            FIFO_WIDTH => ADSB_FIFO_WIDTH,
+            FIFO_DEPTH => ADSB_FIFO_DEPTH
+        )
+        port map (
+            clk        => clk,
+            rst        => '0',
+            wr_data_i  => adsb_data & std_logic_vector(adsb_re) & std_logic_vector(adsb_im) & adsb_w56,
+            wr_vld_i   => adsb_vld,
+            wr_rdy_o   => adsb_rdy,
+            rd_data_o  => fifo_rd_data,
+            rd_vld_o   => fifo_rd_vld,
+            rd_rdy_i   => fifo_rd_rdy
+        );
+
     i_r <= i_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
     q_r <= q_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
     d_vld_r <= d_vld_i;
@@ -103,27 +128,6 @@ begin
                 -- Turn on LED if a valid ADS-B message was detected.
                 -- TODO maybe put this on a timer.
                 led_r <= '1';
-            end if;
-
-            if adsb_vld = '1' then
-                -- Handle valid data.
-            end if;
-
-            -- TODO Test UART.
-            uart_vld <= '0';
-            adsb_rdy <= '0';
-            if uart_rdy = '1' and adsb_vld = '1' then
-                if uart_timer = UART_TIMER_MAX-1 then
-                    uart_data <= X"4D";
-                    uart_vld <= '1';
-                    uart_timer <= 0;
-                    adsb_rdy <= '1';
-                else
-                    uart_timer <= uart_timer + 1;
-                    uart_vld <= '0';
-                end if;
-            else
-                uart_timer <= 0;
             end if;
         end if;
     end process main_process;
