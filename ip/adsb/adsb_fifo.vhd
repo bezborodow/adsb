@@ -47,7 +47,7 @@ architecture rtl of adsb_fifo is
 begin
     rd_data_o <= ram(rd_addr);
 
-    full_o <= '1' when circular_incr(wr_addr) = rd_addr and sm_fifo = FILLING else '0';
+    full_o <= '1' when wr_addr = rd_addr and sm_fifo = FILLING else '0';
     empty_o <= '1' when wr_addr = rd_addr and sm_fifo = EMPTYING else '0';
     wr_rdy_o <= '1' when full_o = '0' else '0';
     rd_vld_o <= '1' when empty_o = '0' else '0';
