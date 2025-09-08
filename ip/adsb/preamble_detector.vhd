@@ -174,8 +174,6 @@ begin
                     end if;
                 end loop;
 
-                --VHDL 1076-2008 only.
-                --local_detect := true when all_thresholds_ok else false;
                 if all_thresholds_ok then
                     local_detect := true;
                 else
