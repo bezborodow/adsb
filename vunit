@@ -15,32 +15,21 @@ lib.add_source_files("ip/uart/*.vhd")
 lib.add_source_files("tb/*/*.vhd")
 lib.add_source_files("tb/*.vhd")
 
-tb = lib.test_bench("schmitt_trigger_tb")
-tb.set_sim_option("ghdl.sim_flags", ["--wave=schmitt_trigger_tb.ghw"])
+tb_names = [
+    "schmitt_trigger_tb",
+    "preamble_detector_tb",
+    "freq_est_tb",
+    "adsb_tb",
+    "adsb_fifo_tb",
+    "adsb_serialiser_tb",
+    "adsb_uart_tb",
+    "uart_tx_tb",
+    "uart_tx_enc_tb"
+]
 
-tb = lib.test_bench("preamble_detector_tb")
-tb.set_sim_option("ghdl.sim_flags", ["--wave=preamble_detector_tb.ghw"])
-
-tb = lib.test_bench("freq_est_tb")
-tb.set_sim_option("ghdl.sim_flags", ["--wave=freq_est_tb.ghw"])
-
-tb = lib.test_bench("adsb_tb")
-tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_tb.ghw"])
-
-tb = lib.test_bench("adsb_fifo_tb")
-tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_fifo_tb.ghw"])
-
-tb = lib.test_bench("adsb_serialiser_tb")
-tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_serialiser_tb.ghw"])
-
-tb = lib.test_bench("adsb_uart_tb")
-tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_uart_tb.ghw"])
-
-tb = lib.test_bench("uart_tx_tb")
-tb.set_sim_option("ghdl.sim_flags", ["--wave=uart_tx_tb.ghw"])
-
-tb = lib.test_bench("uart_tx_enc_tb")
-tb.set_sim_option("ghdl.sim_flags", ["--wave=uart_tx_enc_tb.ghw"])
+for name in tb_names:
+    tb = lib.test_bench(name)
+    tb.set_sim_option("ghdl.sim_flags", [f"--wave={name}.ghw"])
 
 # PPM Demod. Has different test cases, so need to add their own wave files.
 tb = lib.test_bench("ppm_demod_tb")
