@@ -41,7 +41,7 @@ begin
     s_vld_o <= s_vld_c;
     s_last_o <= s_last_c;
     s_eom_o <= s_last_c; -- Use same signal last for EOM.
-    s_data_o <= s_data_c;
+    s_data_o <= s_data_c when s_vld_c = '1' else (others => '0');
 
     master_process : process(clk) is
         variable adsb_length : positive range 56 to 112 := 112;
@@ -83,7 +83,6 @@ begin
     begin
         if rising_edge(clk) then
             if buffer_valid = '1' then
-                s_vld_c <= '1';
                 s_data_c <= serial_buffer(byte_index);
 
                 -- Assert last signals on the last byte.
@@ -103,10 +102,10 @@ begin
                     end if;
                 end if;
             else
-                s_vld_c  <= '0';
-                s_last_c  <= '0';
+                s_last_c <= '0';
                 byte_index := 0;
             end if;
+            s_vld_c <= '1' when (buffer_valid = '1') and (buffer_ready = '0') else '0';
         end if;
     end process slave_process;
 
