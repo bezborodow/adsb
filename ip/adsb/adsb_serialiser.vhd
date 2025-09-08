@@ -29,22 +29,27 @@ end adsb_serialiser;
 architecture rtl of adsb_serialiser is
     constant MAX_MESSAGE_BYTES : positive := (112 + 64) / 8;
     signal serial_buffer : uart_byte_array_t(0 to MAX_MESSAGE_BYTES-1) := (others => (others => '0'));
-    signal buffer_valid : std_logic := '0'; -- Master sets to '1' when buffer is full.
-    signal message_length : positive := MAX_MESSAGE_BYTES;
+    signal buffer_valid : std_logic := '0'; -- Master process sets to '1' when buffer is full.
+    signal buffer_ready : std_logic := '0'; -- Slave process sets to '1' when buffer is empty.
+    signal message_length : positive range 1 to MAX_MESSAGE_BYTES := MAX_MESSAGE_BYTES;
+    signal s_vld_c : std_logic := '0';
     signal s_last_c : std_logic := '0';
+    signal s_data_c : std_logic_vector(7 downto 0) := (others => '0');
 begin
     s_ascii_o <= '1';
     m_rdy_o <= not buffer_valid;
+    s_vld_o <= s_vld_c;
     s_last_o <= s_last_c;
-    s_eom_o <= s_last_o;
+    s_eom_o <= s_last_c; -- Use same signal last for EOM.
+    s_data_o <= s_data_c;
 
     master_process : process(clk) is
-        variable adsb_length : positive := 112;
+        variable adsb_length : positive range 56 to 112 := 112;
     begin
         if rising_edge(clk) then
             if m_vld_i = '1' and m_rdy_o = '1' then
+                -- Insert ADS-B message into the serial buffer.
                 adsb_length := 56 when m_w56_i = '1' else 112;
-
                 for i in 0 to (adsb_length/8 - 1) loop
                     serial_buffer(i) <= m_data_i(adsb_length-i*8-1 downto adsb_length-i*8-8);
                 end loop;
@@ -61,8 +66,14 @@ begin
                 serial_buffer(adsb_length/8 + 6) <= std_logic_vector(m_est_im_i(15 downto 8));
                 serial_buffer(adsb_length/8 + 7) <= std_logic_vector(m_est_im_i(7 downto 0));
 
+                -- Pass to serialiser process.
                 message_length <= (adsb_length + 64) / 8;
                 buffer_valid <= '1';
+            end if;
+
+            if buffer_valid = '1' and buffer_ready = '1' then
+                -- Finished sending to slave. Serialiser is empty. Ready to accept more data.
+                buffer_valid <= '0';
             end if;
         end if;
     end process master_process;
@@ -72,28 +83,27 @@ begin
     begin
         if rising_edge(clk) then
             if buffer_valid = '1' then
-                s_vld_o   <= '1';
-                s_data_o  <= serial_buffer(byte_index);
+                s_vld_c <= '1';
+                s_data_c <= serial_buffer(byte_index);
 
                 -- Assert last signals on the last byte.
-                if byte_index = (message_length/8 - 1) then
-                    s_last_c  <= '1';
+                if byte_index = message_length-1 then
+                    s_last_c <= '1';
                 else
-                    s_last_c  <= '0';
+                    s_last_c <= '0';
                 end if;
 
                 -- Increment index only if downstream is ready.
                 if s_rdy_i = '1' then
-                    if byte_index = (message_length/8 - 1) then
-                        buffer_valid <= '0'; -- return ownership to master
-                        byte_index   := 0;
+                    if byte_index = message_length-1 then
+                        buffer_ready <= '1'; -- Return ownership to master process.
+                        byte_index := 0;
                     else
                         byte_index := byte_index + 1;
                     end if;
                 end if;
             else
-                s_vld_o  <= '0';
-                s_last_o <= '0';
+                s_vld_c  <= '0';
                 s_last_c  <= '0';
                 byte_index := 0;
             end if;
