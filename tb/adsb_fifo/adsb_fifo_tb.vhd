@@ -24,15 +24,18 @@ architecture test of adsb_fifo_tb is
     signal fifo_rst : std_logic := '0';
 
     -- Write side.
-    signal fifo_wr_en   : std_logic := '0';
-    signal fifo_wr_data : std_logic_vector(FIFO_WIDTH-1 downto 0) := (others => '0');
-    signal fifo_full    : std_logic;
+    signal fifo_wr_data  : std_logic_vector(FIFO_WIDTH-1 downto 0) := (others => '0');
+    signal fifo_wr_vld   : std_logic := '0';
+    signal fifo_wr_rdy   : std_logic;
 
     -- Read side.
-    signal fifo_rd_en   : std_logic := '0';
-    signal fifo_rd_data : std_logic_vector(FIFO_WIDTH-1 downto 0);
-    signal fifo_rd_vld  : std_logic := '0';
-    signal fifo_empty   : std_logic;
+    signal fifo_rd_data  : std_logic_vector(FIFO_WIDTH-1 downto 0);
+    signal fifo_rd_vld   : std_logic := '0';
+    signal fifo_rd_rdy   : std_logic := '0';
+
+    -- Debug signals.
+    signal fifo_full     : std_logic;
+    signal fifo_empty    : std_logic;
 
     -- Data to send.
     type byte2_array_t is array (natural range <>) of std_logic_vector(FIFO_WIDTH-1 downto 0);
@@ -89,15 +92,22 @@ begin
             FIFO_DEPTH => FIFO_DEPTH
         )
         port map (
-            clk     => clk,
-            rst     => fifo_rst,
-            wr_en   => fifo_wr_en,
-            wr_data => fifo_wr_data,
-            full    => fifo_full,
-            rd_en   => fifo_rd_en,
-            rd_data => fifo_rd_data,
-            rd_vld  => fifo_rd_vld,
-            empty   => fifo_empty
+            clk        => clk,
+            rst        => fifo_rst,
+
+            -- Write side.
+            wr_data_i  => fifo_wr_data,
+            wr_vld_i   => fifo_wr_vld,
+            wr_rdy_o   => fifo_wr_rdy,
+
+            -- Read side.
+            rd_data_o  => fifo_rd_data,
+            rd_vld_o   => fifo_rd_vld,
+            rd_rdy_i   => fifo_rd_rdy,
+
+            -- Debug signals.
+            full_o     => fifo_full,
+            empty_o    => fifo_empty
         );
 
     main_test_process : process
@@ -117,20 +127,16 @@ begin
     begin
         if rising_edge(clk) then
             if counter < expected_data'length then
-                -- Only write if FIFO is not full.
-                if fifo_full = '0' then
+                if fifo_wr_rdy = '1' then
                     fifo_wr_data <= expected_data(counter);
-                    fifo_wr_en <= '1';
-                    counter := counter + 1;
-                else
-                    fifo_wr_en <= '0';
+                    fifo_wr_vld <= '1';
+                    counter := counter + 1; -- Advance only when write accepted.
                 end if;
             else
-                fifo_wr_en <= '0'; -- Stop writing when done.
+                fifo_wr_vld <= '0'; -- Stop writing when done.
             end if;
         end if;
     end process stimulus_process;
-
 
     verification_process : process(clk)
         variable done : boolean := false;
@@ -145,13 +151,13 @@ begin
                 if counter > 12 then
                     throttle := '1'; -- Change to full-speed up halfway through the test (full throttle.)
                 end if;
-                if throttle = '1' and fifo_empty = '0' and not done then
-                    fifo_rd_en <= '1';
+                if throttle = '1' and fifo_rd_vld = '1' and not done then
+                    fifo_rd_rdy <= '1';
                 else
-                    fifo_rd_en <= '0';
+                    fifo_rd_rdy <= '0';
                 end if;
 
-                if fifo_rd_vld = '1' then
+                if fifo_rd_vld = '1' and fifo_rd_rdy = '1' then
                     assert fifo_rd_data = expected_data(counter)
                     report "Mismatch: expected=" & slv16_to_hex(expected_data(counter)) & " got=" & slv16_to_hex(fifo_rd_data)
                     severity failure;
