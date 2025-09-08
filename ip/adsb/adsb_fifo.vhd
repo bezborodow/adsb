@@ -30,14 +30,23 @@ entity adsb_fifo is
 end entity adsb_fifo;
 
 architecture rtl of adsb_fifo is
+    -- RAM and addressing.
     type ram_t is array (0 to FIFO_DEPTH-1) of std_logic_vector(FIFO_WIDTH-1 downto 0);
     signal ram : ram_t := (others => (others => '0'));
     signal wr_addr : integer range 0 to FIFO_DEPTH-1 := 0;
     signal rd_addr : integer range 0 to FIFO_DEPTH-1 := 0;
 
+    -- Combinatorial signals.
+    signal full_c : std_logic := '0';
+    signal empty_c : std_logic := '0';
+    signal wr_rdy_c : std_logic := '0';
+    signal rd_vld_c : std_logic := '0';
+
+    -- State machine.
     type fifo_state_t is (EMPTYING, FILLING);
     signal sm_fifo : fifo_state_t := EMPTYING;
 
+    -- Increment circular buffer address (using modulus.)
     function circular_incr(
         addr : integer
     ) return integer is
@@ -45,12 +54,20 @@ architecture rtl of adsb_fifo is
         return (addr + 1) mod FIFO_DEPTH;
     end function;
 begin
-    rd_data_o <= ram(rd_addr);
+    -- Combinatorial signals. Need these since cannot read from output ports.
+    full_c <= '1' when wr_addr = rd_addr and sm_fifo = FILLING else '0';
+    empty_c <= '1' when wr_addr = rd_addr and sm_fifo = EMPTYING else '0';
+    wr_rdy_c <= '1' when full_c = '0' else '0';
+    rd_vld_c <= '1' when empty_c = '0' else '0';
 
-    full_o <= '1' when wr_addr = rd_addr and sm_fifo = FILLING else '0';
-    empty_o <= '1' when wr_addr = rd_addr and sm_fifo = EMPTYING else '0';
-    wr_rdy_o <= '1' when full_o = '0' else '0'; -- TODO cannot read from 'out' object
-    rd_vld_o <= '1' when empty_o = '0' else '0'; -- TODO cannot read from 'out' object
+    -- Drive output signals.
+    full_o <= full_c;
+    empty_o <= empty_c;
+    wr_rdy_o <= wr_rdy_c;
+    rd_vld_o <= rd_vld_c;
+
+    -- Combinatorial data output from current RAM address.
+    rd_data_o <= ram(rd_addr);
 
     fifo_process : process(clk)
         variable sm_fifo_n : fifo_state_t;
@@ -60,8 +77,8 @@ begin
         if rising_edge(clk) then
             sm_fifo_n := sm_fifo;
 
-            wr_en_v := (wr_vld_i = '1') and (wr_rdy_o = '1'); -- TODO cannot read from 'out' object
-            rd_en_v := (rd_vld_o = '1') and (rd_rdy_i = '1'); -- TODO cannot read from 'out' object
+            wr_en_v := (wr_vld_i = '1') and (wr_rdy_c = '1'); -- TODO cannot read from 'out' object
+            rd_en_v := (rd_vld_c = '1') and (rd_rdy_i = '1'); -- TODO cannot read from 'out' object
 
             -- Determine FIFO state (latching.)
             if wr_en_v and not rd_en_v then
