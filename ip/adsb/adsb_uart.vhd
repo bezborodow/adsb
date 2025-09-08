@@ -53,10 +53,24 @@ architecture rtl of adsb_uart is
     signal uart_rdy : std_logic := '0';
     signal uart_data : std_logic_vector(7 downto 0) := (others => '0');
 
-    -- FIFO Read side signals.
+    -- FIFO read side signals.
     signal fifo_rd_data  : std_logic_vector(ADSB_FIFO_WIDTH-1 downto 0);
     signal fifo_rd_vld   : std_logic := '0';
     signal fifo_rd_rdy   : std_logic := '0';
+
+    -- Combinatorial FIFO signals.
+    signal fifo_rd_adsb_c : std_logic_vector(111 downto 0);
+    signal fifo_rd_re_c   : signed(31 downto 0);
+    signal fifo_rd_im_c   : signed(31 downto 0);
+    signal fifo_rd_w56_c  : std_logic;
+
+    -- Serialiser signals.
+    signal srl_s_vld   : std_logic := '0';
+    signal srl_s_last  : std_logic := '0';                  -- Last byte indicator.
+    signal srl_s_rdy   : std_logic;
+    signal srl_s_data  : std_logic_vector(7 downto 0) := (others => '0');
+    signal srl_s_ascii : std_logic := '0';                  -- Convert to ASCII.
+    signal srl_s_eom   : std_logic := '0';                  -- End-of-message (newline.)
 
     -- TODO Test signals.
     constant UART_TIMER_MAX : positive := 100000;
@@ -107,7 +121,7 @@ begin
         port map (
             clk        => clk,
             rst        => '0',
-            wr_data_i  => adsb_data & std_logic_vector(adsb_re) & std_logic_vector(adsb_im) & adsb_w56,
+            wr_data_i => adsb_w56 & std_logic_vector(adsb_im) & std_logic_vector(adsb_re) & adsb_data,
             wr_vld_i   => adsb_vld,
             wr_rdy_o   => adsb_rdy,
             rd_data_o  => fifo_rd_data,
@@ -115,11 +129,34 @@ begin
             rd_rdy_i   => fifo_rd_rdy
         );
 
+    i_adsb_serialiser : entity work.adsb_serialiser
+        port map (
+            clk        => clk,
+            m_vld_i    => fifo_rd_vld,
+            m_rdy_o    => fifo_rd_rdy,
+            m_w56_i    => fifo_rd_w56_c,
+            m_data_i   => fifo_rd_adsb_c,
+            m_est_re_i => fifo_rd_re_c,
+            m_est_im_i => fifo_rd_im_c,
+            s_vld_o    => srl_s_vld,
+            s_last_o   => srl_s_last,
+            s_rdy_i    => srl_s_rdy,
+            s_data_o   => srl_s_data,
+            s_ascii_o  => srl_s_ascii,
+            s_eom_o    => srl_s_eom
+        );
+
     i_r <= i_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
     q_r <= q_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
     d_vld_r <= d_vld_i;
     uart_tx_o <= uart_tx;
     led_o <= led_r;
+
+    -- Combinatorial unpacking from FIFO read data.
+    fifo_rd_w56_c  <= fifo_rd_data(176); -- bit 176, 1-bit flag for 112 or 56 bit ADS-B data.
+    fifo_rd_im_c   <= signed(fifo_rd_data(175 downto 144)); -- 32-bit imaginary phasor.
+    fifo_rd_re_c   <= signed(fifo_rd_data(143 downto 112)); -- 32-bit real phasor.
+    fifo_rd_adsb_c <= fifo_rd_data(111 downto 0); -- 112-bit ADS-B message.
 
     main_process : process(clk)
     begin
