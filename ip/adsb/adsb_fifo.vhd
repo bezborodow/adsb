@@ -49,8 +49,8 @@ begin
 
     full_o <= '1' when wr_addr = rd_addr and sm_fifo = FILLING else '0';
     empty_o <= '1' when wr_addr = rd_addr and sm_fifo = EMPTYING else '0';
-    wr_rdy_o <= '1' when full_o = '0' else '0';
-    rd_vld_o <= '1' when empty_o = '0' else '0';
+    wr_rdy_o <= '1' when full_o = '0' else '0'; -- TODO cannot read from 'out' object
+    rd_vld_o <= '1' when empty_o = '0' else '0'; -- TODO cannot read from 'out' object
 
     fifo_process : process(clk)
         variable sm_fifo_n : fifo_state_t;
@@ -60,8 +60,8 @@ begin
         if rising_edge(clk) then
             sm_fifo_n := sm_fifo;
 
-            wr_en_v := (wr_vld_i = '1') and (wr_rdy_o = '1');
-            rd_en_v := (rd_vld_o = '1') and (rd_rdy_i = '1');
+            wr_en_v := (wr_vld_i = '1') and (wr_rdy_o = '1'); -- TODO cannot read from 'out' object
+            rd_en_v := (rd_vld_o = '1') and (rd_rdy_i = '1'); -- TODO cannot read from 'out' object
 
             -- Determine FIFO state (latching.)
             if wr_en_v and not rd_en_v then
