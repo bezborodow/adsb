@@ -8,14 +8,18 @@ open_project $base_project_xpr
 save_project_as $project_name -force
 
 # Add in the custom IP cores.
-add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_pkg.vhd
-add_files -fileset sources_1 -norecurse ../ip/adsb/preamble_detector.vhd
-add_files -fileset sources_1 -norecurse ../ip/schmitt_trigger/schmitt_trigger.vhd
-add_files -fileset sources_1 -norecurse ../ip/adsb/ppm_demod.vhd
-add_files -fileset sources_1 -norecurse ../ip/freq_est/freq_est.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb.vhd
+add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_fifo.vhd
+add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_pkg.vhd
+add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_serialiser.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_uart.vhd
+add_files -fileset sources_1 -norecurse ../ip/adsb/ppm_demod.vhd
+add_files -fileset sources_1 -norecurse ../ip/adsb/preamble_detector.vhd
+add_files -fileset sources_1 -norecurse ../ip/freq_est/freq_est.vhd
+add_files -fileset sources_1 -norecurse ../ip/schmitt_trigger/schmitt_trigger.vhd
+add_files -fileset sources_1 -norecurse ../ip/uart/uart_pkg.vhd
 add_files -fileset sources_1 -norecurse ../ip/uart/uart_tx.vhd
+add_files -fileset sources_1 -norecurse ../ip/uart/uart_tx_enc.vhd
 
 import_files -force -norecurse
 update_compile_order -fileset sources_1
