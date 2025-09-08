@@ -151,7 +151,7 @@ begin
         wait;
     end process stimulus_process;
 
-    data_check_process : process(clk)
+    verification_process : process(clk)
         variable done : boolean := false;
         variable counter : natural := 0;
         variable expected_data : uart_byte_array_t(0 to 11) := (
@@ -185,5 +185,5 @@ begin
                 report "Did not receive all expected data." severity failure;
             end if;
         end if;
-    end process data_check_process;
+    end process verification_process;
 end test;

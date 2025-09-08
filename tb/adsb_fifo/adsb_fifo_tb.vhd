@@ -13,8 +13,9 @@ end adsb_fifo_tb;
 architecture test of adsb_fifo_tb is
     signal clk: std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
+    signal end_of_test : boolean := false;
 
-    -- FIFO parameters
+    -- FIFO parameters.
     constant FIFO_WIDTH : integer := 16;
     constant FIFO_DEPTH : integer := 4;
 
@@ -30,7 +31,54 @@ architecture test of adsb_fifo_tb is
     -- Read side.
     signal fifo_rd_en   : std_logic := '0';
     signal fifo_rd_data : std_logic_vector(FIFO_WIDTH-1 downto 0);
+    signal fifo_rd_vld  : std_logic := '0';
     signal fifo_empty   : std_logic;
+
+    -- Data to send.
+    type byte2_array_t is array (natural range <>) of std_logic_vector(FIFO_WIDTH-1 downto 0);
+    constant expected_data : byte2_array_t(0 to 23) := (
+        0  => x"1A2B",
+        1  => x"3C4D",
+        2  => x"5E6F",
+        3  => x"7890",
+        4  => x"ABCD",
+        5  => x"EF01",
+        6  => x"2345",
+        7  => x"6789",
+        8  => x"9ABC",
+        9  => x"DEF0",
+        10 => x"1357",
+        11 => x"2468",
+        12 => x"0F1E",
+        13 => x"2D3C",
+        14 => x"4B5A",
+        15 => x"6978",
+        16 => x"8F9E",
+        17 => x"A1B2",
+        18 => x"C3D4",
+        19 => x"E5F6",
+        20 => x"1020",
+        21 => x"3040",
+        22 => x"5060",
+        23 => x"7080"
+    );
+
+    function slv16_to_hex(slv : std_logic_vector(15 downto 0)) return string is
+        variable result : string(1 to 4);
+        variable val : integer := to_integer(unsigned(slv));
+        variable nibble : integer;
+    begin
+        for i in 1 to 4 loop
+            nibble := (val / (16**(4-i))) mod 16;
+            if nibble < 10 then
+                result(i) := character'val(48 + nibble);  -- '0'..'9'
+            else
+                result(i) := character'val(55 + nibble);  -- 'A'..'F'
+            end if;
+        end loop;
+        return result;
+    end function;
+
 
 begin
     clk <= not clk after clk_period / 2;
@@ -48,15 +96,76 @@ begin
             full    => fifo_full,
             rd_en   => fifo_rd_en,
             rd_data => fifo_rd_data,
+            rd_vld  => fifo_rd_vld,
             empty   => fifo_empty
         );
 
-    main : process
+    main_test_process : process
     begin
         test_runner_setup(runner, runner_cfg);
-        report "Hello world!";
-        wait for clk_period * 10000;
-        test_runner_cleanup(runner); -- Simulation ends here
+        wait for clk_period * 400;
+
+        -- End of test! Trigger checks!
+        end_of_test <= true;
+        wait for clk_period;
+        test_runner_cleanup(runner); -- Simulation ends here.
         wait;
-    end process main;
+    end process main_test_process;
+
+    stimulus_process : process(clk)
+        variable counter : natural := 0;
+    begin
+        if rising_edge(clk) then
+            if counter < expected_data'length then
+                -- Only write if FIFO is not full.
+                if fifo_full = '0' then
+                    fifo_wr_data <= expected_data(counter);
+                    fifo_wr_en <= '1';
+                    counter := counter + 1;
+                else
+                    fifo_wr_en <= '0';
+                end if;
+            else
+                fifo_wr_en <= '0'; -- Stop writing when done.
+            end if;
+        end if;
+    end process stimulus_process;
+
+
+    verification_process : process(clk)
+        variable done : boolean := false;
+        variable counter : natural := 0;
+        variable throttle : std_logic := '0';
+        variable pause : natural := 0;
+    begin
+        if rising_edge(clk) then
+            pause := pause + 1;
+            if (pause > 20) then
+                throttle := not throttle; -- Throttle the clock by half.
+                if counter > 12 then
+                    throttle := '1'; -- Change to full-speed up halfway through the test (full throttle.)
+                end if;
+                if throttle = '1' and fifo_empty = '0' and not done then
+                    fifo_rd_en <= '1';
+                else
+                    fifo_rd_en <= '0';
+                end if;
+
+                if fifo_rd_vld = '1' then
+                    assert fifo_rd_data = expected_data(counter)
+                    report "Mismatch: expected=" & slv16_to_hex(expected_data(counter)) & " got=" & slv16_to_hex(fifo_rd_data)
+                    severity failure;
+
+                    counter := counter + 1;
+                    if counter = expected_data'length then
+                        done := true;
+                    end if;
+                end if;
+
+                if end_of_test and not done then
+                    report "Did not receive all expected data." severity failure;
+                end if;
+            end if;
+        end if;
+    end process verification_process;
 end test;
