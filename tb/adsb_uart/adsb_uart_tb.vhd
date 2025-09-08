@@ -11,8 +11,8 @@ entity adsb_uart_tb is
 end adsb_uart_tb;
 
 architecture test of adsb_uart_tb is
-    signal input_i : signed(15 downto 0) := (others => '0');
-    signal input_q : signed(15 downto 0) := (others => '0');
+    signal input_i : signed(11 downto 0) := (others => '0');
+    signal input_q : signed(11 downto 0) := (others => '0');
 
     signal clk: std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
@@ -22,13 +22,25 @@ architecture test of adsb_uart_tb is
 begin
     clk <= not clk after clk_period / 2;
 
-    uut: entity work.adsb_uart port map (
-        clk => clk,
-        d_vld_i => '1',
-        i_i => input_i,
-        q_i => input_q,
-        uart_tx_o => adsb_uart_tx
-    );
+    uut : entity work.adsb_uart
+        generic map (
+            RX_IQ_WIDTH => 12,
+            IQ_WIDTH => 12,
+            SAMPLES_PER_SYMBOL => 10,
+            PREAMBLE_BUFFER_LENGTH => 160,
+            PREAMBLE_POSITION1 => 20,
+            PREAMBLE_POSITION2 => 70,
+            PREAMBLE_POSITION3 => 90,
+            ACCUMULATION_LENGTH => 1024,
+            UART_CLK_DIV => 174
+        )
+        port map (
+            clk => clk,
+            d_vld_i => '1',
+            i_i => input_i,
+            q_i => input_q,
+            uart_tx_o => adsb_uart_tx
+        );
 
     main : process
         file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
@@ -42,8 +54,8 @@ begin
             read(line_buf, line_i);
             read(line_buf, line_q);
 
-            input_i <= to_signed(line_i, 16);
-            input_q <= to_signed(line_q, 16);
+            input_i <= to_signed(line_i, 12);
+            input_q <= to_signed(line_q, 12);
 
             wait for clk_period;
         end loop;

@@ -29,7 +29,7 @@ architecture test of freq_est_tb is
 begin
     clk <= not clk after clk_period / 2;
 
-    uut: entity work.freq_est port map (
+    uut : entity work.freq_est port map (
         clk => clk,
         ce_i => '1',
         start_i => start,

@@ -12,39 +12,37 @@ lib.add_source_files("ip/schmitt_trigger/*.vhd")
 lib.add_source_files("ip/adsb/*.vhd")
 lib.add_source_files("ip/freq_est/*.vhd")
 lib.add_source_files("ip/uart/*.vhd")
-
-# Add all files ending in .vhd in current working directory to library
+lib.add_source_files("tb/*/*.vhd")
 lib.add_source_files("tb/*.vhd")
-lib.add_source_files("tb/schmitt_trigger/*.vhd")
+
 tb = lib.test_bench("schmitt_trigger_tb")
 tb.set_sim_option("ghdl.sim_flags", ["--wave=schmitt_trigger_tb.ghw"])
 
-lib.add_source_files("tb/preamble_detector/*.vhd")
 tb = lib.test_bench("preamble_detector_tb")
 tb.set_sim_option("ghdl.sim_flags", ["--wave=preamble_detector_tb.ghw"])
 
-lib.add_source_files("tb/freq_est/*.vhd")
 tb = lib.test_bench("freq_est_tb")
 tb.set_sim_option("ghdl.sim_flags", ["--wave=freq_est_tb.ghw"])
 
-lib.add_source_files("tb/adsb/*.vhd")
 tb = lib.test_bench("adsb_tb")
 tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_tb.ghw"])
 
-lib.add_source_files("tb/adsb_uart/*.vhd")
+tb = lib.test_bench("adsb_fifo_tb")
+tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_fifo_tb.ghw"])
+
+tb = lib.test_bench("adsb_serialiser_tb")
+tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_serialiser_tb.ghw"])
+
 tb = lib.test_bench("adsb_uart_tb")
 tb.set_sim_option("ghdl.sim_flags", ["--wave=adsb_uart_tb.ghw"])
 
-lib.add_source_files("tb/uart_tx/*.vhd")
 tb = lib.test_bench("uart_tx_tb")
 tb.set_sim_option("ghdl.sim_flags", ["--wave=uart_tx_tb.ghw"])
 
-lib.add_source_files("tb/uart_tx_enc/*.vhd")
 tb = lib.test_bench("uart_tx_enc_tb")
 tb.set_sim_option("ghdl.sim_flags", ["--wave=uart_tx_enc_tb.ghw"])
 
 # PPM Demod. Has different test cases, so need to add their own wave files.
-lib.add_source_files("tb/ppm_demod/*.vhd")
 tb = lib.test_bench("ppm_demod_tb")
 # robustly obtain VUnit output path (handle different VUnit versions)
 out_path = Path(getattr(vu, "output_path", None) or getattr(vu, "_output_path", Path(".")))

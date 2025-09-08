@@ -65,7 +65,7 @@ architecture rtl of adsb is
     signal demod_data : std_logic_vector(111 downto 0) := (others => '0');
  
 begin
-    detector: entity work.preamble_detector 
+    detector : entity work.preamble_detector 
         generic map (
             SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL,
             IQ_WIDTH           => IQ_WIDTH,
@@ -89,7 +89,7 @@ begin
             mag_sq_o => detector_mag_sq
         );
     
-    trigger: entity work.schmitt_trigger
+    trigger : entity work.schmitt_trigger
         generic map (
             SIGNAL_WIDTH => MAGNITUDE_WIDTH
         )
@@ -103,7 +103,7 @@ begin
         );
 
     -- PPM demodulator.
-    demod: entity work.ppm_demod
+    demod : entity work.ppm_demod
         generic map (
             SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL
         )
@@ -120,7 +120,7 @@ begin
         );
 
     -- Frequency estimator.
-    freq_est: entity work.freq_est
+    freq_est : entity work.freq_est
         generic map (
             IQ_WIDTH => IQ_WIDTH,
             ACCUMULATION_LENGTH => ACCUMULATION_LENGTH

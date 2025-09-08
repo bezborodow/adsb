@@ -1,0 +1,61 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use std.textio.all;
+library vunit_lib;
+context vunit_lib.vunit_context;
+
+entity adsb_serialiser_tb is
+--  port ( );
+    generic (runner_cfg : string);
+end adsb_serialiser_tb;
+
+architecture test of adsb_serialiser_tb is
+    signal clk: std_logic := '1';
+    constant clk_period : time := 50 ns; -- 20 MHz sample rate.
+
+    -- Master interface signals.
+    signal srl_m_vld_i    : std_logic := '0';
+    signal srl_m_rdy_o    : std_logic;
+    signal srl_m_w56_i    : std_logic := '0';
+    signal srl_m_data_i   : std_logic_vector(111 downto 0) := (others => '0');
+    signal srl_m_est_re_i : signed(31 downto 0) := (others => '0');
+    signal srl_m_est_im_i : signed(31 downto 0) := (others => '0');
+
+    -- Slave interface signals.
+    signal srl_s_vld_o    : std_logic;
+    signal srl_s_last_o   : std_logic;
+    signal srl_s_rdy_i    : std_logic := '1';  -- Default ready.
+    signal srl_s_data_o   : std_logic_vector(7 downto 0);
+    signal srl_s_ascii_o  : std_logic;
+    signal srl_s_eom_o    : std_logic;
+begin
+    clk <= not clk after clk_period / 2;
+
+    uut : entity work.adsb_serialiser
+        port map (
+            clk        => clk,
+            m_vld_i    => srl_m_vld_i,
+            m_rdy_o    => srl_m_rdy_o,
+            m_w56_i    => srl_m_w56_i,
+            m_data_i   => srl_m_data_i,
+            m_est_re_i => srl_m_est_re_i,
+            m_est_im_i => srl_m_est_im_i,
+            s_vld_o    => srl_s_vld_o,
+            s_last_o   => srl_s_last_o,
+            s_rdy_i    => srl_s_rdy_i,
+            s_data_o   => srl_s_data_o,
+            s_ascii_o  => srl_s_ascii_o,
+            s_eom_o    => srl_s_eom_o
+        );
+
+    main : process
+    begin
+        test_runner_setup(runner, runner_cfg);
+        report "Hello world!";
+        wait for clk_period * 10000;
+
+        test_runner_cleanup(runner); -- Simulation ends here
+        wait;
+    end process main;
+end test;

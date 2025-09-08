@@ -21,7 +21,7 @@ architecture test of preamble_detector_tb is
 begin
     clk <= not clk after clk_period / 2;
     
-    uut: entity work.preamble_detector port map (
+    uut : entity work.preamble_detector port map (
         clk => clk,
         ce_i => '1',
         i_i => i_i,
