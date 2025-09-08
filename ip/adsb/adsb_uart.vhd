@@ -47,12 +47,6 @@ architecture rtl of adsb_uart is
     signal adsb_re : signed(31 downto 0) := (others => '0');
     signal adsb_im : signed(31 downto 0) := (others => '0');
 
-    -- UART signals.
-    signal uart_tx : std_logic := '1';
-    signal uart_vld : std_logic := '0';
-    signal uart_rdy : std_logic := '0';
-    signal uart_data : std_logic_vector(7 downto 0) := (others => '0');
-
     -- FIFO read side signals.
     signal fifo_rd_data  : std_logic_vector(ADSB_FIFO_WIDTH-1 downto 0);
     signal fifo_rd_vld   : std_logic := '0';
@@ -71,6 +65,17 @@ architecture rtl of adsb_uart is
     signal srl_s_data  : std_logic_vector(7 downto 0) := (others => '0');
     signal srl_s_ascii : std_logic := '0';                  -- Convert to ASCII.
     signal srl_s_eom   : std_logic := '0';                  -- End-of-message (newline.)
+
+    -- Encoder signals.
+    signal enc_s_vld   : std_logic := '0';
+    signal enc_s_rdy   : std_logic;
+    signal enc_s_data  : std_logic_vector(7 downto 0) := (others => '0');
+
+    -- UART signals.
+    --signal uart_vld : std_logic := '0';
+    --signal uart_rdy : std_logic := '0';
+    --signal uart_data : std_logic_vector(7 downto 0) := (others => '0');
+    signal uart_tx : std_logic := '1';
 
     -- TODO Test signals.
     constant UART_TIMER_MAX : positive := 100000;
@@ -99,18 +104,6 @@ begin
             w56_o => adsb_w56,
             est_re_o => adsb_re,
             est_im_o => adsb_im
-        );
-
-    i_uart_tx : entity work.uart_tx
-        generic map (
-            CLK_DIV => UART_CLK_DIV
-        )
-        port map (
-            clk => clk,
-            vld_i => uart_vld,
-            rdy_o => uart_rdy,
-            data_i => uart_data,
-            tx_o => uart_tx
         );
 
     i_adsb_fifo : entity work.adsb_fifo
@@ -144,6 +137,31 @@ begin
             s_data_o   => srl_s_data,
             s_ascii_o  => srl_s_ascii,
             s_eom_o    => srl_s_eom
+        );
+
+    i_uart_tx_enc : entity work.uart_tx_enc
+        port map (
+            clk => clk,
+            m_vld_i => srl_s_vld,
+            m_rdy_o => srl_s_rdy,
+            m_data_i => srl_s_data,
+            m_ascii_i => srl_s_ascii,
+            m_eom_i => srl_s_eom,
+            s_vld_o => enc_s_vld,
+            s_rdy_i => enc_s_rdy,
+            s_data_o => enc_s_data
+        );
+
+    i_uart_tx : entity work.uart_tx
+        generic map (
+            CLK_DIV => UART_CLK_DIV
+        )
+        port map (
+            clk => clk,
+            vld_i => enc_s_vld,
+            rdy_o => enc_s_rdy,
+            data_i => enc_s_data,
+            tx_o => uart_tx
         );
 
     i_r <= i_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);

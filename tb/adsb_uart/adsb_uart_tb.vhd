@@ -32,7 +32,7 @@ begin
             PREAMBLE_POSITION2 => 70,
             PREAMBLE_POSITION3 => 90,
             ACCUMULATION_LENGTH => 1024,
-            UART_CLK_DIV => 174
+            UART_CLK_DIV => 4 -- Don't choose a realistic baud rate, because the testbench will take forever.
         )
         port map (
             clk => clk,
