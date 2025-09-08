@@ -25,7 +25,6 @@ architecture Behavioral of ppm_demod is
     signal edge_timer : unsigned(15 downto 0) := (others => '0');
     signal envelope_z1 : std_logic := '0';
     signal start_demod : std_logic := '0';
-    --signal symbol : std_logic_vector(1 downto 0) := "00";
     signal data_r : std_logic_vector(111 downto 0) := (others => '0');
     signal malformed_r : std_logic := '0';
     signal valid_r : std_logic := '0';
@@ -120,8 +119,8 @@ begin
                                 invalid_symbol := true;
                             end if;
                             if not invalid_symbol then
-                                -- TODO This should be a shift register.
-                                data_r(to_integer(index)) <= sample;
+                                -- Shift into LSB.
+                                data_r <= data_r(110 downto 0) & sample;
                                 if index = 111 then
                                     valid_r <= '1';
                                 end if;
