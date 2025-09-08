@@ -126,14 +126,16 @@ begin
         variable counter : natural := 0;
     begin
         if rising_edge(clk) then
-            if counter < expected_data'length then
-                if fifo_wr_rdy = '1' then
-                    fifo_wr_data <= expected_data(counter);
-                    fifo_wr_vld <= '1';
+            if counter < expected_data'length-1 then
+                fifo_wr_data <= expected_data(counter);
+                fifo_wr_vld <= '1';
+                if fifo_wr_vld = '1' and fifo_wr_rdy = '1' then
                     counter := counter + 1; -- Advance only when write accepted.
+                    fifo_wr_data <= expected_data(counter);
                 end if;
             else
                 fifo_wr_vld <= '0'; -- Stop writing when done.
+                fifo_wr_data <= (others => '0');
             end if;
         end if;
     end process stimulus_process;
