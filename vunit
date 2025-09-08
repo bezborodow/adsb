@@ -37,13 +37,7 @@ tb = lib.test_bench("ppm_demod_tb")
 out_path = Path(getattr(vu, "output_path", None) or getattr(vu, "_output_path", Path(".")))
 
 # get the list of testcase objects (try a few common APIs)
-try:
-    tests = tb.get_test_cases()   # newer API
-except AttributeError:
-    try:
-        tests = tb.get_tests()    # older API
-    except AttributeError:
-        tests = getattr(tb, "test_cases", [])  # last fallback (may be empty)
+tests = tb.get_tests()
 
 for tc in tests:
     # obtain a usable testcase name (handle .name or .get_name())
