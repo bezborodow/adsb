@@ -32,12 +32,14 @@ architecture rtl of adsb_serialiser is
     signal buffer_valid : std_logic := '0'; -- Master process sets to '1' when buffer is full.
     signal buffer_ready : std_logic := '0'; -- Slave process sets to '1' when buffer is empty.
     signal message_length : positive range 1 to MAX_MESSAGE_BYTES := MAX_MESSAGE_BYTES;
+    signal m_rdy_c : std_logic := '0';
     signal s_vld_c : std_logic := '0';
     signal s_last_c : std_logic := '0';
     signal s_data_c : std_logic_vector(7 downto 0) := (others => '0');
 begin
     s_ascii_o <= '1';
-    m_rdy_o <= not buffer_valid;
+    m_rdy_c <= not buffer_valid;
+    m_rdy_o <= m_rdy_c;
     s_vld_o <= s_vld_c;
     s_last_o <= s_last_c;
     s_eom_o <= s_last_c; -- Use same signal last for EOM.
@@ -47,12 +49,24 @@ begin
         variable adsb_length : positive range 56 to 112 := 112;
     begin
         if rising_edge(clk) then
-            if m_vld_i = '1' and m_rdy_o = '1' then
+            if m_vld_i = '1' and m_rdy_c = '1' then
+                -- Determine length of ADS-B message in bits.
+                if m_w56_i = '1' then
+                    adsb_length := 56;
+                else
+                    adsb_length := 112;
+                end if;
+
                 -- Insert ADS-B message into the serial buffer.
-                adsb_length := 56 when m_w56_i = '1' else 112;
-                for i in 0 to (adsb_length/8 - 1) loop
-                    serial_buffer(i) <= m_data_i(adsb_length-i*8-1 downto adsb_length-i*8-8);
-                end loop;
+                if m_w56_i = '1' then
+                    for i in 0 to 6 loop  -- 56/8 - 1
+                        serial_buffer(i) <= m_data_i(55 - i*8 downto 48 - i*8);
+                    end loop;
+                else
+                    for i in 0 to 13 loop -- 112/8 - 1
+                        serial_buffer(i) <= m_data_i(111 - i*8 downto 104 - i*8);
+                    end loop;
+                end if;
 
                 -- Append real part of phasor.
                 serial_buffer(adsb_length/8 + 0) <= std_logic_vector(m_est_re_i(31 downto 24));
@@ -105,7 +119,12 @@ begin
                 s_last_c <= '0';
                 byte_index := 0;
             end if;
-            s_vld_c <= '1' when (buffer_valid = '1') and (buffer_ready = '0') else '0';
+
+            if (buffer_valid = '1') and (buffer_ready = '0') then
+                s_vld_c <= '1';
+            else
+                s_vld_c <= '0';
+            end if;
         end if;
     end process slave_process;
 
