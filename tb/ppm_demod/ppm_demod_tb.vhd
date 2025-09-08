@@ -64,7 +64,7 @@ architecture test of ppm_demod_tb is
 begin
     clk <= not clk after clk_period / 2;
 
-    uut: entity work.ppm_demod port map (
+    uut : entity work.ppm_demod port map (
         clk => clk,
         ce_i => '1',
         rdy_i => ready,

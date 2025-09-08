@@ -14,6 +14,16 @@ architecture test of adsb_serialiser_tb is
     signal clk: std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
 
+    -- 56-bit ADS-B message (14 hex digits.)
+    constant test_adsb_56 : std_logic_vector(55 downto 0) := x"20A1B2C3D4E5F6";
+
+    -- 112-bit ADS-B message (28 hex digits.)
+    constant test_adsb_112 : std_logic_vector(111 downto 0) := x"123456789ABCDEF0123456789ABC";
+
+    -- 32-bit signed phasor integers.
+    constant test_est_re : signed(31 downto 0) := x"7F12AB34";
+    constant test_est_im : signed(31 downto 0) := x"C0DE1234";
+
     -- Master interface signals.
     signal srl_m_vld_i    : std_logic := '0';
     signal srl_m_rdy_o    : std_logic;
@@ -52,8 +62,23 @@ begin
     main : process
     begin
         test_runner_setup(runner, runner_cfg);
-        report "Hello world!";
-        wait for clk_period * 10000;
+
+        wait for clk_period;
+
+        if run("112bit") then
+            wait for clk_period;
+        end if;
+        if run("56bit") then
+            srl_m_w56_i <= '1';
+            srl_m_data_i <= x"00000000000000" & test_adsb_56;
+            srl_m_est_re_i <= test_est_re;
+            srl_m_est_im_i <= test_est_im;
+            srl_m_vld_i <= '1';
+            wait for clk_period;
+            srl_m_w56_i <= '0';
+        end if;
+
+        wait for clk_period * 100;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;

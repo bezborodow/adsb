@@ -21,7 +21,6 @@ tb_names = [
     "freq_est_tb",
     "adsb_tb",
     "adsb_fifo_tb",
-    "adsb_serialiser_tb",
     "adsb_uart_tb",
     "uart_tx_tb",
     "uart_tx_enc_tb"
@@ -33,14 +32,19 @@ for name in tb_names:
 
 # PPM Demod. Has different test cases, so need to add their own wave files.
 tb = lib.test_bench("ppm_demod_tb")
-# robustly obtain VUnit output path (handle different VUnit versions)
 out_path = Path(getattr(vu, "output_path", None) or getattr(vu, "_output_path", Path(".")))
-
-# get the list of testcase objects (try a few common APIs)
 tests = tb.get_tests()
-
 for tc in tests:
-    # obtain a usable testcase name (handle .name or .get_name())
+    # Obtain a usable testcase name (handle .name or .get_name()).
+    tc_name = getattr(tc, "name", None) or (tc.get_name() if hasattr(tc, "get_name") else str(tc))
+    wavefile = str(out_path / f"{tb.name}.{tc_name}.ghw")
+    tc.set_sim_option("ghdl.sim_flags", [f"--wave={wavefile}"])
+
+# Same with this one.
+tb = lib.test_bench("adsb_serialiser_tb")
+out_path = Path(getattr(vu, "output_path", None) or getattr(vu, "_output_path", Path(".")))
+tests = tb.get_tests()
+for tc in tests:
     tc_name = getattr(tc, "name", None) or (tc.get_name() if hasattr(tc, "get_name") else str(tc))
     wavefile = str(out_path / f"{tb.name}.{tc_name}.ghw")
     tc.set_sim_option("ghdl.sim_flags", [f"--wave={wavefile}"])
