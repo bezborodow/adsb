@@ -145,6 +145,7 @@ begin
         -- End of test! Trigger checks!
         wait for clk_period * 30;
         end_of_test <= true;
+        wait for clk_period;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
@@ -181,7 +182,7 @@ begin
             end if;
 
             if end_of_test and not done then
-                --report "Did not receive all expected data." severity failure;
+                report "Did not receive all expected data." severity failure;
             end if;
         end if;
     end process data_check_process;
