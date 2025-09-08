@@ -65,18 +65,19 @@ begin
 
         wait for clk_period;
 
+        srl_m_est_re_i <= test_est_re;
+        srl_m_est_im_i <= test_est_im;
+        srl_m_vld_i <= '1';
         if run("112bit") then
+            srl_m_data_i <= test_adsb_112;
             wait for clk_period;
         end if;
         if run("56bit") then
             srl_m_w56_i <= '1';
             srl_m_data_i <= x"00000000000000" & test_adsb_56;
-            srl_m_est_re_i <= test_est_re;
-            srl_m_est_im_i <= test_est_im;
-            srl_m_vld_i <= '1';
             wait for clk_period;
-            srl_m_w56_i <= '0';
         end if;
+        srl_m_vld_i <= '0';
 
         wait for clk_period * 100;
 
