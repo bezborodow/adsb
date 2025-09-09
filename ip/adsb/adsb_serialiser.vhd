@@ -98,6 +98,7 @@ begin
         if rising_edge(clk) then
             if buffer_valid = '1' then
                 s_data_c <= serial_buffer(byte_index);
+                buffer_ready <= '0'; -- Take ownership of the buffer.
 
                 -- Assert last signals on the last byte.
                 if byte_index = message_length-1 then
