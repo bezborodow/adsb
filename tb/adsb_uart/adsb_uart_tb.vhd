@@ -48,7 +48,22 @@ begin
         variable line_i, line_q : integer;
     begin
         test_runner_setup(runner, runner_cfg);
-        report "Hello world!";
+        while not endfile(iq_file) loop
+            readline(iq_file, line_buf);
+            read(line_buf, line_i);
+            read(line_buf, line_q);
+
+            input_i <= to_signed(line_i, 12);
+            input_q <= to_signed(line_q, 12);
+
+            wait for clk_period;
+        end loop;
+
+        -- Close and reopen the file.
+        file_close(iq_file);
+        file_open(iq_file, "tb/schmitt_trigger/iq_data.txt", read_mode);
+
+        -- Second pass to check that consecutive messages can be received.
         while not endfile(iq_file) loop
             readline(iq_file, line_buf);
             read(line_buf, line_i);
