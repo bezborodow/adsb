@@ -15,14 +15,18 @@ architecture test of adsb_serialiser_tb is
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
 
     -- 56-bit ADS-B message (14 hex digits.)
-    constant test_adsb_56 : std_logic_vector(55 downto 0) := x"20A1B2C3D4E5F6";
+    constant test_adsb_56 : std_logic_vector(55 downto 0) := x"AAA1B2C3D4E511";
+    constant test_adsb_56_2 : std_logic_vector(55 downto 0) := x"DD90F280CB9A44";
 
     -- 112-bit ADS-B message (28 hex digits.)
-    constant test_adsb_112 : std_logic_vector(111 downto 0) := x"123456789ABCDEF0123456789ABC";
+    constant test_adsb_112 : std_logic_vector(111 downto 0) := x"AAA456789ABCDEF0123456789A11";
+    constant test_adsb_112_2 : std_logic_vector(111 downto 0) := x"DD84E9F5654EC846A8E8F6DDDD44";
 
     -- 32-bit signed phasor integers.
-    constant test_est_re : signed(31 downto 0) := x"7F12AB34";
-    constant test_est_im : signed(31 downto 0) := x"C0DE1234";
+    constant test_est_re : signed(31 downto 0) := x"BBB2AB22";
+    constant test_est_im : signed(31 downto 0) := x"CC000033";
+    constant test_est_re_2 : signed(31 downto 0) := x"EEB2AB55";
+    constant test_est_im_2 : signed(31 downto 0) := x"FF000066";
 
     -- Master interface signals.
     signal srl_m_vld_i    : std_logic := '0';
@@ -65,21 +69,46 @@ begin
 
         wait for clk_period;
 
-        srl_m_est_re_i <= test_est_re;
-        srl_m_est_im_i <= test_est_im;
-        srl_m_vld_i <= '1';
         if run("112bit") then
+            srl_m_est_re_i <= test_est_re;
+            srl_m_est_im_i <= test_est_im;
             srl_m_data_i <= test_adsb_112;
+            srl_m_vld_i <= '1';
             wait for clk_period;
+
+            srl_m_vld_i <= '0';
+            wait for clk_period * 150;
+
+            srl_m_est_re_i <= test_est_re_2;
+            srl_m_est_im_i <= test_est_im_2;
+            srl_m_data_i <= test_adsb_112_2;
+            srl_m_vld_i <= '1';
+            wait for clk_period;
+
+            srl_m_vld_i <= '0';
+            wait for clk_period * 150;
         end if;
         if run("56bit") then
+            srl_m_est_re_i <= test_est_re;
+            srl_m_est_im_i <= test_est_im;
             srl_m_w56_i <= '1';
             srl_m_data_i <= x"00000000000000" & test_adsb_56;
+            srl_m_vld_i <= '1';
             wait for clk_period;
-        end if;
-        srl_m_vld_i <= '0';
 
-        wait for clk_period * 100;
+            srl_m_vld_i <= '0';
+            wait for clk_period * 100;
+
+            srl_m_est_re_i <= test_est_re_2;
+            srl_m_est_im_i <= test_est_im_2;
+            srl_m_w56_i <= '1';
+            srl_m_data_i <= x"00000000000000" & test_adsb_56_2;
+            srl_m_vld_i <= '1';
+            wait for clk_period;
+
+            srl_m_vld_i <= '0';
+            wait for clk_period * 100;
+        end if;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;

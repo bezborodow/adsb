@@ -114,7 +114,7 @@ begin
         port map (
             clk        => clk,
             rst        => '0',
-            wr_data_i  => adsb_w56 & std_logic_vector(adsb_im) & std_logic_vector(adsb_re) & adsb_data,
+            wr_data_i  => adsb_w56 & adsb_data & std_logic_vector(adsb_re) & std_logic_vector(adsb_im),
             wr_vld_i   => adsb_vld,
             wr_rdy_o   => adsb_rdy,
             rd_data_o  => fifo_rd_data,
@@ -171,10 +171,10 @@ begin
     led_o <= led_r;
 
     -- Combinatorial unpacking from FIFO read data.
-    fifo_rd_w56_c  <= fifo_rd_data(176); -- bit 176, 1-bit flag for 112 or 56 bit ADS-B data.
-    fifo_rd_im_c   <= signed(fifo_rd_data(175 downto 144)); -- 32-bit imaginary phasor.
-    fifo_rd_re_c   <= signed(fifo_rd_data(143 downto 112)); -- 32-bit real phasor.
-    fifo_rd_adsb_c <= fifo_rd_data(111 downto 0); -- 112-bit ADS-B message.
+    fifo_rd_w56_c  <= fifo_rd_data(176);
+    fifo_rd_re_c   <= signed(fifo_rd_data(63 downto 32));
+    fifo_rd_im_c   <= signed(fifo_rd_data(31 downto 0));
+    fifo_rd_adsb_c <= fifo_rd_data(175 downto 64);
 
     main_process : process(clk)
     begin
