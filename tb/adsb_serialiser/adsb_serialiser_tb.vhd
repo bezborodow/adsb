@@ -70,6 +70,7 @@ begin
         wait for clk_period;
 
         if run("112bit") then
+            assert srl_m_rdy_o = '1' report "Serialiser should be ready." severity failure;
             srl_m_est_re_i <= test_est_re;
             srl_m_est_im_i <= test_est_im;
             srl_m_data_i <= test_adsb_112;
@@ -77,8 +78,12 @@ begin
             wait for clk_period;
 
             srl_m_vld_i <= '0';
+            wait for clk_period;
+            assert srl_m_rdy_o = '0' report "Serialiser should be busy." severity failure;
             wait for clk_period * 150;
 
+            assert srl_m_rdy_o = '1' report "Serialiser should be ready." severity failure;
+            srl_m_est_re_i <= test_est_re;
             srl_m_est_re_i <= test_est_re_2;
             srl_m_est_im_i <= test_est_im_2;
             srl_m_data_i <= test_adsb_112_2;
@@ -86,9 +91,13 @@ begin
             wait for clk_period;
 
             srl_m_vld_i <= '0';
+            wait for clk_period;
+            assert srl_m_rdy_o = '0' report "Serialiser should be busy." severity failure;
             wait for clk_period * 150;
         end if;
         if run("56bit") then
+            assert srl_m_rdy_o = '1' report "Serialiser should be ready." severity failure;
+            srl_m_est_re_i <= test_est_re;
             srl_m_est_re_i <= test_est_re;
             srl_m_est_im_i <= test_est_im;
             srl_m_w56_i <= '1';
@@ -97,8 +106,12 @@ begin
             wait for clk_period;
 
             srl_m_vld_i <= '0';
+            wait for clk_period;
+            assert srl_m_rdy_o = '0' report "Serialiser should be busy." severity failure;
             wait for clk_period * 100;
 
+            assert srl_m_rdy_o = '1' report "Serialiser should be ready." severity failure;
+            srl_m_est_re_i <= test_est_re;
             srl_m_est_re_i <= test_est_re_2;
             srl_m_est_im_i <= test_est_im_2;
             srl_m_w56_i <= '1';
@@ -107,6 +120,8 @@ begin
             wait for clk_period;
 
             srl_m_vld_i <= '0';
+            wait for clk_period;
+            assert srl_m_rdy_o = '0' report "Serialiser should be busy." severity failure;
             wait for clk_period * 100;
         end if;
 
