@@ -34,14 +34,14 @@ architecture rtl of preamble_detector is
 
     -- How many samples the IQ stream is delayed by compared to when the preamble is detected.
     -- TODO Write testbench to ensure that pipeline delay is correct.
-    constant PIPELINE_DELAY : integer := 5;
+    constant PIPELINE_DELAY : integer := 6;
 
     --constant BUFFER_LENGTH : integer := SAMPLES_PER_SYMBOL * BUFFER_SYMBOL_LENGTH;
     constant CORRELATION_WIDTH : integer := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
 
     -- Magnitude squared calculation.
-    signal i_sq : signed(IQ_WIDTH*2-1 downto 0);
-    signal q_sq : signed(IQ_WIDTH*2-1 downto 0);
+    signal i_r, q_r : signed(IQ_WIDTH-1 downto 0);
+    signal i_sq, q_sq : signed(IQ_WIDTH*2-1 downto 0);
     signal magnitude_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0);
 
     -- Where each pulse in the preamble starts.
@@ -105,6 +105,21 @@ begin
     high_threshold_o <= high_threshold_r;
     low_threshold_o <= low_threshold_r;
 
+    mag_sq_process : process(clk)
+    begin
+        if rising_edge(clk) then
+            if ce_r = '1' then
+                -- Calculate magnitude squared.
+                -- Use registers to improve timing for DSP.
+                i_r <= i_i;
+                q_r <= q_i;
+                i_sq <= i_r * i_r;
+                q_sq <= q_r * q_r;
+                magnitude_sq <= resize(unsigned(i_sq), magnitude_sq'length) + resize(unsigned(q_sq), magnitude_sq'length);
+            end if;
+        end if;
+    end process mag_sq_process;
+
     trigger_process : process(clk)
         variable sum_energy : unsigned(CORRELATION_WIDTH-1 downto 0);
 
@@ -115,11 +130,6 @@ begin
     begin
         if rising_edge(clk) then
             if ce_r = '1' then
-                -- Calculate magnitude squared.
-                i_sq <= i_i * i_i;
-                q_sq <= q_i * q_i;
-                magnitude_sq <= resize(unsigned(i_sq), magnitude_sq'length) + resize(unsigned(q_sq), magnitude_sq'length);
-
                 -- Append most recently arrived sample onto the end of the shift register.
                 shift_reg(BUFFER_LENGTH-1) <= magnitude_sq;
                 i_reg(PIPELINE_DELAY-1) <= i_i;

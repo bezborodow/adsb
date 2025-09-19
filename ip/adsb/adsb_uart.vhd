@@ -27,7 +27,6 @@ entity adsb_uart is
 end adsb_uart;
 
 architecture rtl of adsb_uart is
-
     -- FIFO parameters.
     constant ADSB_FIFO_WIDTH : integer := 177;
     constant ADSB_FIFO_DEPTH : integer := 4;
