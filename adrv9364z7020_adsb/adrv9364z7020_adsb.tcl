@@ -48,6 +48,44 @@ connect_bd_net [get_bd_pins i_adsb_uart/d_vld_i] [get_bd_pins util_ad9361_adc_fi
 connect_bd_net [get_bd_pins util_ad9361_adc_fifo/dout_clk] [get_bd_pins i_adsb_uart/clk]
 connect_bd_net [get_bd_pins i_adsb_uart/uart_tx_o] [get_bd_pins sys_ps7/UART0_RX]
 
+# Direct digital synthesiser (DDS.)
+# fs = 61.44e6
+# fo = 5e6
+# B = 24
+# dec2bin(uint32(fo * 2^B / fs)) = 101001101010101010101
+startgroup
+create_bd_cell -type ip -vlnv xilinx.com:ip:dds_compiler:6.0 dds_compiler_0
+endgroup
+set_property -dict [list \
+  CONFIG.DATA_Has_TLAST {Not_Required} \
+  CONFIG.DDS_Clock_Rate {61.44} \
+  CONFIG.Has_Phase_Out {true} \
+  CONFIG.Has_TREADY {false} \
+  CONFIG.Latency {8} \
+  CONFIG.Latency_Configuration {Auto} \
+  CONFIG.M_DATA_Has_TUSER {Not_Required} \
+  CONFIG.Mode_of_Operation {Standard} \
+  CONFIG.Noise_Shaping {Taylor_Series_Corrected} \
+  CONFIG.Output_Width {16} \
+  CONFIG.PINC1 {101001101010101010101} \
+  CONFIG.Parameter_Entry {Hardware_Parameters} \
+  CONFIG.PartsPresent {Phase_Generator_and_SIN_COS_LUT} \
+  CONFIG.Phase_Width {24} \
+  CONFIG.S_PHASE_Has_TUSER {Not_Required} \
+] [get_bd_cells dds_compiler_0]
+connect_bd_net [get_bd_pins dds_compiler_0/aclk] [get_bd_pins util_ad9361_divclk/clk_out]
+
+
+# Complex multiply.
+startgroup
+create_bd_cell -type ip -vlnv xilinx.com:ip:cmpy:6.0 cmpy_0
+endgroup
+set_property CONFIG.OutputWidth {16} [get_bd_cells cmpy_0]
+connect_bd_net [get_bd_pins dds_compiler_0/m_axis_data_tdata] [get_bd_pins cmpy_0/s_axis_a_tdata]
+connect_bd_net [get_bd_pins dds_compiler_0/m_axis_data_tvalid] [get_bd_pins cmpy_0/s_axis_a_tvalid]
+connect_bd_net [get_bd_pins cmpy_0/aclk] [get_bd_pins util_ad9361_divclk/clk_out]
+
+
 update_compile_order -fileset sources_1
 validate_bd_design
 save_bd_design
