@@ -28,15 +28,21 @@ entity preamble_detector is
     );
 end preamble_detector;
 
-architecture Behavioral of preamble_detector is
+architecture rtl of preamble_detector is
     -- Clock enable.
     signal ce_r : std_logic := '0';
 
     -- How many samples the IQ stream is delayed by compared to when the preamble is detected.
+    -- TODO Write testbench to ensure that pipeline delay is correct.
     constant PIPELINE_DELAY : integer := 5;
 
     --constant BUFFER_LENGTH : integer := SAMPLES_PER_SYMBOL * BUFFER_SYMBOL_LENGTH;
     constant CORRELATION_WIDTH : integer := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
+
+    -- Magnitude squared calculation.
+    signal i_sq : signed(IQ_WIDTH*2-1 downto 0);
+    signal q_sq : signed(IQ_WIDTH*2-1 downto 0);
+    signal magnitude_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0);
 
     -- Where each pulse in the preamble starts.
     -- There are four pulses in the preamble of an ADS-B message.
@@ -100,9 +106,6 @@ begin
     low_threshold_o <= low_threshold_r;
 
     trigger_process : process(clk)
-        variable input_i_sq : signed(IQ_WIDTH*2-1 downto 0);
-        variable input_q_sq : signed(IQ_WIDTH*2-1 downto 0);
-        variable magnitude_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0);
         variable sum_energy : unsigned(CORRELATION_WIDTH-1 downto 0);
 
         variable tmp_sym : symbol_energy_t;
@@ -112,10 +115,10 @@ begin
     begin
         if rising_edge(clk) then
             if ce_r = '1' then
-                input_i_sq := i_i * i_i;
-                input_q_sq := q_i * q_i;
-                -- TODO use a register here for magsq! Don't put directly into the shift register.
-                magnitude_sq := resize(unsigned(input_i_sq), magnitude_sq'length) + resize(unsigned(input_q_sq), magnitude_sq'length);
+                -- Calculate magnitude squared.
+                i_sq <= i_i * i_i;
+                q_sq <= q_i * q_i;
+                magnitude_sq <= resize(unsigned(i_sq), magnitude_sq'length) + resize(unsigned(q_sq), magnitude_sq'length);
 
                 -- Append most recently arrived sample onto the end of the shift register.
                 shift_reg(BUFFER_LENGTH-1) <= magnitude_sq;
@@ -222,4 +225,4 @@ begin
         end if;
     end process delay_process;
 
-end Behavioral;
+end rtl;

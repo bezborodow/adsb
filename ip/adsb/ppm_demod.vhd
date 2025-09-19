@@ -20,7 +20,7 @@ entity ppm_demod is
         data_o : out std_logic_vector(111 downto 0)
     );
 end ppm_demod;
-architecture Behavioral of ppm_demod is
+architecture rtl of ppm_demod is
     constant HALF_SPS : integer := SAMPLES_PER_SYMBOL / 2;
     signal edge_timer : unsigned(15 downto 0) := (others => '0');
     signal envelope_z1 : std_logic := '0';
@@ -145,4 +145,4 @@ begin
 
     end process demod_process;
 
-end Behavioral;
+end rtl;
