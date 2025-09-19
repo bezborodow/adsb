@@ -40,7 +40,6 @@ architecture Behavioral of preamble_detector is
 
     -- Where each pulse in the preamble starts.
     -- There are four pulses in the preamble of an ADS-B message.
-    --constant PREAMBLE_POSITION : adsb_int_array_t := (0, 2, 7, 9);
     constant PREAMBLE_POSITION : adsb_int_array_t := (
         0,
         PREAMBLE_POSITION1,
@@ -80,7 +79,6 @@ architecture Behavioral of preamble_detector is
     begin
         for i in 0 to PREAMBLE_POSITION'length-1 loop
             for ii in 0 to SAMPLES_PER_SYMBOL-1 loop
-                --idx_sym := PREAMBLE_POSITION(i) * SAMPLES_PER_SYMBOL + ii;
                 idx_sym := PREAMBLE_POSITION(i) + ii;
                 if idx_sym >= sr'low and idx_sym <= sr'high then
                     s := resize(sr(idx_sym), m'length);
@@ -116,6 +114,7 @@ begin
             if ce_r = '1' then
                 input_i_sq := i_i * i_i;
                 input_q_sq := q_i * q_i;
+                -- TODO use a register here for magsq! Don't put directly into the shift register.
                 magnitude_sq := resize(unsigned(input_i_sq), magnitude_sq'length) + resize(unsigned(input_q_sq), magnitude_sq'length);
 
                 -- Append most recently arrived sample onto the end of the shift register.
@@ -135,7 +134,7 @@ begin
                     tmp_sym(j) := (others => '0');
                 end loop;
 
-                -- sum each symbol bin from the shift_reg. Assumes shift_reg(0) is most recent sample.
+                -- Sum each symbol bin from the shift_reg.
                 for i in 0 to PREAMBLE_POSITION'length-1 loop
                     for ii in 0 to SAMPLES_PER_SYMBOL-1 loop
                         idx_sym := PREAMBLE_POSITION(i) + ii;
@@ -143,7 +142,7 @@ begin
                     end loop;
                 end loop;
 
-                -- write back to signals (or keep as variables)
+                -- Write back to signals.
                 for j in 0 to PREAMBLE_POSITION'length-1 loop
                     sym_energy(j) <= tmp_sym(j);
                 end loop;
@@ -224,4 +223,3 @@ begin
     end process delay_process;
 
 end Behavioral;
-
