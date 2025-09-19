@@ -32,6 +32,8 @@ begin
         variable b : signed(IQ_WIDTH-1 downto 0) := 0;
         variable c : signed(IQ_WIDTH-1 downto 0) := 0;
         variable d : signed(IQ_WIDTH-1 downto 0) := 0;
+        variable re : signed(IQ_WIDTH*2 downto 0) := 0;
+        variable im : signed(IQ_WIDTH*2 downto 0) := 0;
     begin
         if rising_edge(clk) then
             if ce_s= '1' then
@@ -42,8 +44,11 @@ begin
 
                 -- Complex multiply.
                 -- (a + bj)(c + dj)
-                i_o <= a * c - b * d; -- In-phase / real part.
-                q_o <= a * d + b * c; -- Quadrature / imaginary part.
+                re := a * c - b * d; -- In-phase / real part.
+                im := a * d + b * c; -- Quadrature / imaginary part.
+
+                i_o <= resize(shift_right(re, re'length - i_o'length), i_o'length);
+                q_o <= resize(shift_right(im, im'length - q_o'length), q_o'length);
             end if;
         end if;
     end process mixer_process;
