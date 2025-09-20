@@ -47,7 +47,17 @@ architecture rtl of adsb_preamble_peak is
     end record;
     
     type windowed_sample_record_array_t is array (natural range <>) of windowed_sample_record_t;
-    signal history_a : windowed_sample_record_array_t(0 to RECORD_ARRAY_LENGTH-1);
+    signal history_a : windowed_sample_record_array_t(0 to RECORD_ARRAY_LENGTH-1) := (
+        others => (
+            i             => (others => '0'),
+            q             => (others => '0'),
+            mag_sq        => (others => '0'),
+            max_mag_sq    => (others => '0'),
+            win_ei        => (others => '0'),
+            win_eo        => (others => '0'),
+            thresholds_ok => '0'
+        )
+    );
 begin
 
     history_buffer_process : process(clk)
