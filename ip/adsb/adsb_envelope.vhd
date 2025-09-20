@@ -30,6 +30,7 @@ architecture rtl of adsb_envelope is
     signal i_sq, q_sq : signed(SQ_WIDTH-1 downto 0) := (others => '0');
     signal mag_sq_r, mag_sq_z1 : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
 begin
+
     -- Combinatorial signals.
     ce_c <= ce_i;
     mag_sq_o <= mag_sq_z1;
@@ -44,7 +45,7 @@ begin
                 -- Use registers to improve timing for DSP.
                 i_r <= i_i;
                 q_r <= q_i;
-                
+
                 -- Second delay. Multiplication. Keep pass-through IQ synchronised.
                 i_sq <= i_r * i_r;
                 q_sq <= q_r * q_r;
