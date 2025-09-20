@@ -33,12 +33,12 @@ architecture rtl of preamble_detector is
     -- Accumulator width for for entire preamble buffer.
     constant BUFFER_ACCUMULATOR_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
 
-    -- Envelope outputs (inputs to the windower)
+    -- Envelope outputs (inputs to the windower.)
     signal env_i        : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal env_q        : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal env_mag_sq   : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
 
-    -- Windower outputs (inputs to the peak detector)
+    -- Windower outputs (inputs to the peak detector.)
     signal win_i              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal win_q              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal win_mag_sq         : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
@@ -47,12 +47,16 @@ architecture rtl of preamble_detector is
     signal win_max_mag_sq     : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     signal win_thres_ok       : std_logic;
 
-    -- Peak outputs (final outputs from the cascade)
+    -- Peak outputs (final outputs from the cascade.)
     signal pk_i          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal pk_q          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal pk_mag_sq     : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     signal pk_max_mag_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     signal pk_detect     : std_logic := '0';
+
+    -- TODO Schmitt trigger thresholds.
+    signal high_threshold_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal low_threshold_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
 
 begin
     -- Magnitude-squared envelope detector.
@@ -120,13 +124,4 @@ begin
             max_mag_sq_o         => pk_max_mag_sq,
             detect_o             => pk_detect
         );
-
-    detect_process : process(clk)
-    begin
-        if rising_edge(clk) then
-            if ce_i = '1' then
-                -- TODO
-            end if;
-        end if;
-    end process detect_process;
 end rtl;
