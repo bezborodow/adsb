@@ -35,14 +35,14 @@ architecture rtl of adsb_preamble_peak is
     constant RECORD_ARRAY_LENGTH : positive := 5;
 
     type windowed_sample_record_t is record
-        i               : signed(IQ_WIDTH-1 downto 0);
-        q               : signed(IQ_WIDTH-1 downto 0);
-        mag_sq          : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_ei          : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_eo          : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_et          : unsigned(MAGNITUDE_WIDTH downto 0);
-        thresholds_ok   : std_logic;
-        max_mag_sq      : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        i             : signed(IQ_WIDTH-1 downto 0);
+        q             : signed(IQ_WIDTH-1 downto 0);
+        mag_sq        : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        win_ei        : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        win_eo        : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        win_et        : unsigned(MAGNITUDE_WIDTH downto 0);
+        thresholds_ok : std_logic;
+        max_mag_sq    : unsigned(MAGNITUDE_WIDTH-1 downto 0);
     end record;
     
     type windowed_sample_record_array_t is array (natural range <>) of windowed_sample_record_t;
@@ -50,9 +50,12 @@ architecture rtl of adsb_preamble_peak is
     -- type unsigned_hist_5_t is array (0 to 4) of unsigned(CORRELATION_WIDTH-1 downto 0);
 begin
 
-    thresholds_process : process(clk)
+    history_buffer_process : process(clk)
     begin
-
-    end process thresholds_process;
-
+        if rising_edge(clk) then
+            if ce_i = '1' then
+                -- TODO Register inputs into buffer.
+            end if;
+        end if;
+    end process history_buffer_process;
 end rtl;

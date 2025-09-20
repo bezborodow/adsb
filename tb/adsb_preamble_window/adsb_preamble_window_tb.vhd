@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
+use ieee.math_real.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
 
@@ -13,6 +14,7 @@ end adsb_preamble_window_tb;
 architecture test of adsb_preamble_window_tb is
     constant IQ_WIDTH : integer := 12;
     constant MAGNITUDE_WIDTH : integer := IQ_WIDTH * 2 + 1;
+    constant BUFFER_ACCUMULATOR_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(160)))); -- TODO move to generic package?
 
     -- UUT signals.
     signal ce_i                  : std_logic := '1';
@@ -22,8 +24,8 @@ architecture test of adsb_preamble_window_tb is
     signal i_o                   : signed(IQ_WIDTH-1 downto 0);
     signal q_o                   : signed(IQ_WIDTH-1 downto 0);
     signal mag_sq_o              : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-    signal win_inside_energy_o   : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-    signal win_outside_energy_o  : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+    signal win_inside_energy_o   : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0);
+    signal win_outside_energy_o  : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0);
 
     -- Clock.
     signal clk: std_logic := '1';

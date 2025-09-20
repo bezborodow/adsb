@@ -21,8 +21,8 @@ entity adsb_preamble_window is
         q_o : out signed(IQ_WIDTH-1 downto 0);
         mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
         max_mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_inside_energy_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_outside_energy_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        win_inside_energy_o : out unsigned(MAGNITUDE_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0); -- TODO Move constant to package?
+        win_outside_energy_o : out unsigned(MAGNITUDE_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0);
         all_thresholds_ok_o : out std_logic
     );
 end adsb_preamble_window;
@@ -34,7 +34,7 @@ architecture rtl of adsb_preamble_window is
     -- Accumulator width for for entire preamble buffer.
     constant BUFFER_ACCUMULATOR_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
 
-    -- Accumulator width for symbol window.
+    -- Accumulator width for a single symbol.
     constant SYMBOL_ACCUMULATOR_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(SAMPLES_PER_SYMBOL))));
 
     -- Number of symbols in the preamble.
@@ -61,7 +61,11 @@ architecture rtl of adsb_preamble_window is
     type symbol_t is array (natural range <>) of mag_sq_buffer_t(0 to SAMPLES_PER_SYMBOL-1);
     signal symbol_reg : symbol_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => (others => '0')));
 
+    -- Accumulated buffer energy.
+    subtype buffer_energy_t is unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0);
+
     -- Symbol energy.
+    -- This is smaller in width than buffer energy.
     subtype symbol_energy_t is unsigned(SYMBOL_ACCUMULATOR_WIDTH-1 downto 0);
     type symbol_energy_array_t is array (natural range <>) of symbol_energy_t;
     signal symbol_energy_a : symbol_energy_array_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => '0'));
@@ -79,20 +83,20 @@ architecture rtl of adsb_preamble_window is
 
     -- Stage 4 registered signals.
     signal stage4_max_mag_sq_r         : mag_sq_t := (others => '0');
-    signal stage4_win_inside_energy_r  : mag_sq_t := (others => '0');
-    signal stage4_win_outside_energy_r : mag_sq_t := (others => '0');
+    signal stage4_win_inside_energy_r  : buffer_energy_t := (others => '0');
+    signal stage4_win_outside_energy_r : buffer_energy_t := (others => '0');
     signal stage4_symbol_energy_a_r    : symbol_energy_array_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => '0'));
 
     -- Stage 5 registered signals.
     signal stage5_max_mag_sq_r         : mag_sq_t := (others => '0');
-    signal stage5_win_inside_energy_r  : mag_sq_t := (others => '0');
-    signal stage5_win_outside_energy_r : mag_sq_t := (others => '0');
-    signal stage5_win_total_energy_r   : mag_sq_t := (others => '0');
+    signal stage5_win_inside_energy_r  : buffer_energy_t := (others => '0');
+    signal stage5_win_outside_energy_r : buffer_energy_t := (others => '0');
+    signal stage5_win_total_energy_r   : buffer_energy_t := (others => '0');
     signal stage5_symbol_energy_a_r    : symbol_energy_array_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => '0'));
 
     -- Output registers.
-    signal win_inside_energy_r : mag_sq_t := (others => '0');
-    signal win_outside_energy_r : mag_sq_t := (others => '0');
+    signal win_inside_energy_r : buffer_energy_t := (others => '0');
+    signal win_outside_energy_r : buffer_energy_t := (others => '0');
     signal max_mag_sq_r : mag_sq_t := (others => '0');
     signal i_r, q_r : iq_t := (others => '0');
     signal mag_sq_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
@@ -198,8 +202,8 @@ begin
 
     -- Find energy inside and outside preamble window.
     stage4_window_energy_process : process(clk)
-        variable sum_inside_v : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
-        variable sum_outside_v : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
+        variable sum_inside_v : buffer_energy_t := (others => '0');
+        variable sum_outside_v : buffer_energy_t := (others => '0');
         variable max_mag_sq_v : mag_sq_t := (others => '0');
     begin
         if rising_edge(clk) then
@@ -237,8 +241,8 @@ begin
                 -- Pass pipeline to next stage.
                 -- Truncate energy least significant bits to fit inside a mag_sq_t.
                 stage4_max_mag_sq_r <= max_mag_sq_v;
-                stage4_win_inside_energy_r <= sum_inside_v(sum_inside_v'high downto sum_inside_v'high-win_inside_energy_r'length+1);
-                stage4_win_outside_energy_r <= sum_outside_v(sum_outside_v'high downto sum_outside_v'high-win_outside_energy_r'length+1);
+                stage4_win_inside_energy_r <= sum_inside_v;
+                stage4_win_outside_energy_r <= sum_outside_v;
                 stage4_symbol_energy_a_r <= symbol_energy_a_z1;
             end if;
         end if;
@@ -257,7 +261,7 @@ begin
     -- Threshold for each preamble high symbol.
     stage6_thresholds_process : process(clk)
         variable symhigh_energy_v : symbol_energy_array_t(0 to 3) := (others => (others => '0'));
-        variable total_energy_v, threshold_v, sym_energy_msb : mag_sq_t := (others => '0');
+        variable total_energy_v, threshold_v : buffer_energy_t := (others => '0');
 
         variable all_thresholds_ok_v : std_logic := '0';
     begin
@@ -274,11 +278,7 @@ begin
                 threshold_v := resize((total_energy_v * to_unsigned(3, total_energy_v'length+2)) srl 4, total_energy_v'length);
                 for i in PREAMBLE_POSITION'range loop
                     symhigh_energy_v(i) := stage5_symbol_energy_a_r(PREAMBLE_POSITION(i));
-                    sym_energy_msb := resize(
-                        shift_right(symhigh_energy_v(i), symhigh_energy_v(i)'length - threshold_v'length),
-                        threshold_v'length
-                    );
-                    if sym_energy_msb <= threshold_v then
+                    if resize(symhigh_energy_v(i), threshold_v'length) <= threshold_v then
                         all_thresholds_ok_v := '0';
                     end if;
                 end loop;
