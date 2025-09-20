@@ -274,7 +274,10 @@ begin
                 threshold_v := resize((total_energy_v * to_unsigned(3, total_energy_v'length+2)) srl 4, total_energy_v'length);
                 for i in PREAMBLE_POSITION'range loop
                     symhigh_energy_v(i) := stage5_symbol_energy_a_r(PREAMBLE_POSITION(i));
-                    sym_energy_msb := symhigh_energy_v(i)(symhigh_energy_v(i)'high downto symhigh_energy_v(i)'high-threshold_v'length+1);
+                    sym_energy_msb := resize(
+                        shift_right(symhigh_energy_v(i), symhigh_energy_v(i)'length - threshold_v'length),
+                        threshold_v'length
+                    );
                     if sym_energy_msb <= threshold_v then
                         all_thresholds_ok_v := '0';
                     end if;
