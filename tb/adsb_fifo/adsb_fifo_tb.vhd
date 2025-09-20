@@ -169,10 +169,10 @@ begin
                         done := true;
                     end if;
                 end if;
+            end if;
 
-                if end_of_test and not done then
-                    report "Did not receive all expected data." severity failure;
-                end if;
+            if end_of_test and not done then
+                report "Did not receive all expected data." severity failure;
             end if;
         end if;
     end process verification_process;

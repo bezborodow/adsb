@@ -39,10 +39,13 @@ architecture rtl of preamble_detector is
     --constant BUFFER_LENGTH : integer := SAMPLES_PER_SYMBOL * BUFFER_SYMBOL_LENGTH;
     constant CORRELATION_WIDTH : integer := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
 
-    -- Magnitude squared calculation.
-    signal i_r, q_r : signed(IQ_WIDTH-1 downto 0);
-    signal i_sq, q_sq : signed(IQ_WIDTH*2-1 downto 0);
-    signal magnitude_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+    -- Combinatorial port signals.
+    signal i_c, q_c : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal mag_sq_c : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+
+    -- Envelope detector signals. IQ and magnitude squared.
+    signal env_i, env_q : signed(IQ_WIDTH-1 downto 0);
+    signal env_mag_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0);
 
     -- Where each pulse in the preamble starts.
     -- There are four pulses in the preamble of an ADS-B message.
@@ -75,8 +78,8 @@ architecture rtl of preamble_detector is
 
     type unsigned_hist_5_t is array (0 to 4) of unsigned(CORRELATION_WIDTH-1 downto 0);
 
-    signal high_threshold_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal low_threshold_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal high_threshold_c : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal low_threshold_c : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
 
     function max_over_preamble(sr : mag_sq_buffer_t) return unsigned is
         variable m       : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
@@ -101,24 +104,27 @@ architecture rtl of preamble_detector is
     end function;
 
 begin
-    ce_c <= ce_i;
-    high_threshold_o <= high_threshold_r;
-    low_threshold_o <= low_threshold_r;
+    envelope : entity work.adsb_envelope
+        generic map (
+            IQ_WIDTH        => IQ_WIDTH,
+            MAGNITUDE_WIDTH => MAGNITUDE_WIDTH
+        )
+        port map (
+            clk      => clk,
+            ce_i     => ce_i,
+            i_i      => i_i,
+            q_i      => q_i,
+            mag_sq_o => env_mag_sq,
+            i_o      => env_i,
+            q_o      => env_q
+        );
 
-    mag_sq_process : process(clk)
-    begin
-        if rising_edge(clk) then
-            if ce_c = '1' then
-                -- Calculate magnitude squared.
-                -- Use registers to improve timing for DSP.
-                i_r <= i_i;
-                q_r <= q_i;
-                i_sq <= i_r * i_r;
-                q_sq <= q_r * q_r;
-                magnitude_sq <= resize(unsigned(i_sq), magnitude_sq'length) + resize(unsigned(q_sq), magnitude_sq'length);
-            end if;
-        end if;
-    end process mag_sq_process;
+    ce_c <= ce_i;
+    high_threshold_o <= high_threshold_c;
+    low_threshold_o <= low_threshold_c;
+    i_o <= i_c;
+    q_o <= q_c;
+    mag_sq_o <= mag_sq_c;
 
     trigger_process : process(clk)
         variable sum_energy : unsigned(CORRELATION_WIDTH-1 downto 0);
@@ -131,9 +137,9 @@ begin
         if rising_edge(clk) then
             if ce_c = '1' then
                 -- Append most recently arrived sample onto the end of the shift register.
-                shift_reg(BUFFER_LENGTH-1) <= magnitude_sq;
-                i_reg(PIPELINE_DELAY-1) <= i_i;
-                q_reg(PIPELINE_DELAY-1) <= q_i;
+                shift_reg(BUFFER_LENGTH-1) <= env_mag_sq;
+                i_reg(PIPELINE_DELAY-1) <= env_i;
+                q_reg(PIPELINE_DELAY-1) <= env_q;
                 for i in 0 to BUFFER_LENGTH-2 loop
                     shift_reg(i) <= shift_reg(i+1);
                 end loop;
@@ -209,8 +215,8 @@ begin
                        (energy_history(2) > energy_history(4)) then
                         detect_o <= '1';
                         max_magnitude := max_over_preamble(shift_reg);
-                        high_threshold_r <= max_magnitude srl 1;
-                        low_threshold_r <= max_magnitude srl 3;
+                        high_threshold_c <= max_magnitude srl 1;
+                        low_threshold_c <= max_magnitude srl 3;
                     else
                         detect_o <= '0';
                     end if;
@@ -228,9 +234,9 @@ begin
     begin
         if rising_edge(clk) then
             if ce_c = '1' then
-                i_o <= i_reg(0);
-                q_o <= q_reg(0);
-                mag_sq_o <= shift_reg(BUFFER_LENGTH - PIPELINE_DELAY);
+                i_c <= i_reg(0);
+                q_c <= q_reg(0);
+                mag_sq_c <= shift_reg(BUFFER_LENGTH - PIPELINE_DELAY);
             end if;
         end if;
     end process delay_process;
