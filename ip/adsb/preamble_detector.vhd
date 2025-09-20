@@ -30,6 +30,8 @@ entity preamble_detector is
 end preamble_detector;
 
 architecture rtl of preamble_detector is
+    -- Accumulator width for for entire preamble buffer.
+    constant BUFFER_ACCUMULATOR_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
 
     -- Envelope outputs (inputs to the windower)
     signal env_i        : signed(IQ_WIDTH-1 downto 0) := (others => '0');
@@ -40,9 +42,10 @@ architecture rtl of preamble_detector is
     signal win_i              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal win_q              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal win_mag_sq         : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal win_inside_energy  : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal win_outside_energy : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal win_inside_energy  : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
+    signal win_outside_energy : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
     signal win_max_mag_sq     : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal win_thres_ok       : std_logic;
 
     -- Peak outputs (final outputs from the cascade)
     signal pk_i          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
@@ -89,12 +92,14 @@ begin
             mag_sq_o             => win_mag_sq,
             win_inside_energy_o  => win_inside_energy,
             win_outside_energy_o => win_outside_energy,
+            all_thresholds_ok_o  => win_thres_ok,
             max_mag_sq_o         => win_max_mag_sq
         );
 
     -- Peak detector.
     u_peak : entity work.adsb_preamble_peak
         generic map (
+            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL,
             IQ_WIDTH           => IQ_WIDTH,
             MAGNITUDE_WIDTH    => MAGNITUDE_WIDTH
         )
@@ -107,6 +112,7 @@ begin
             max_mag_sq_i         => win_max_mag_sq,
             win_inside_energy_i  => win_inside_energy,
             win_outside_energy_i => win_outside_energy,
+            all_thresholds_ok_i  => win_thres_ok,
 
             i_o                  => pk_i,
             q_o                  => pk_q,

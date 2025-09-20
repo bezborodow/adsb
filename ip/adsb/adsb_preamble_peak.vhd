@@ -7,7 +7,8 @@ use work.adsb_pkg.all;
 entity adsb_preamble_peak is
     generic (
         IQ_WIDTH        : integer := ADSB_DEFAULT_IQ_WIDTH;
-        MAGNITUDE_WIDTH : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1
+        MAGNITUDE_WIDTH : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1;
+        SAMPLES_PER_SYMBOL : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL
     );
     port (
         clk : in std_logic;
@@ -16,8 +17,9 @@ entity adsb_preamble_peak is
         q_i : in signed(IQ_WIDTH-1 downto 0);
         mag_sq_i : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
         max_mag_sq_i : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_inside_energy_i : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_outside_energy_i : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        win_inside_energy_i : in unsigned(MAGNITUDE_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0); -- TODO Move constant to package?
+        win_outside_energy_i : in unsigned(MAGNITUDE_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0);
+        all_thresholds_ok_i : in std_logic;
 
         i_o : out signed(IQ_WIDTH-1 downto 0);
         q_o : out signed(IQ_WIDTH-1 downto 0);
@@ -38,11 +40,11 @@ architecture rtl of adsb_preamble_peak is
         i             : signed(IQ_WIDTH-1 downto 0);
         q             : signed(IQ_WIDTH-1 downto 0);
         mag_sq        : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        max_mag_sq    : unsigned(MAGNITUDE_WIDTH-1 downto 0);
         win_ei        : unsigned(MAGNITUDE_WIDTH-1 downto 0);
         win_eo        : unsigned(MAGNITUDE_WIDTH-1 downto 0);
         win_et        : unsigned(MAGNITUDE_WIDTH downto 0);
         thresholds_ok : std_logic;
-        max_mag_sq    : unsigned(MAGNITUDE_WIDTH-1 downto 0);
     end record;
     
     type windowed_sample_record_array_t is array (natural range <>) of windowed_sample_record_t;
