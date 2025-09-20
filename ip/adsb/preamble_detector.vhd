@@ -104,6 +104,7 @@ architecture rtl of preamble_detector is
     end function;
 
 begin
+    -- Magnitude-squared envelope detector.
     envelope : entity work.adsb_envelope
         generic map (
             IQ_WIDTH        => IQ_WIDTH,
@@ -119,6 +120,7 @@ begin
             q_o      => env_q
         );
 
+    -- Combinatorial signals.
     ce_c <= ce_i;
     high_threshold_o <= high_threshold_c;
     low_threshold_o <= low_threshold_c;
@@ -131,8 +133,6 @@ begin
 
         variable tmp_sym : symbol_energy_t;
         variable idx_sym : integer;
-
-        constant THRESHOLD_SCALE : unsigned(CORRELATION_WIDTH-1 downto 0) := to_unsigned(1000000000, CORRELATION_WIDTH);
     begin
         if rising_edge(clk) then
             if ce_c = '1' then
