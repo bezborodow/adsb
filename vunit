@@ -23,6 +23,7 @@ tb_names = [
     "adsb_fifo_tb",
     "adsb_uart_tb",
     "adsb_envelope_tb",
+    "adsb_preamble_window_tb",
     "uart_tx_tb",
     "uart_tx_enc_tb"
 ]

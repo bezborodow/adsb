@@ -4,12 +4,13 @@ use ieee.numeric_std.all;
 use ieee.math_real.all;
 use work.adsb_pkg.all;
 
-entity preamble_detector is
+entity preamble_window is
     generic (
-        SAMPLES_PER_SYMBOL    : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
-        IQ_WIDTH              : integer := ADSB_DEFAULT_IQ_WIDTH;
-        MAGNITUDE_WIDTH       : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1;
-        BUFFER_LENGTH         : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
+        SAMPLES_PER_SYMBOL     : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
+        IQ_WIDTH               : integer := ADSB_DEFAULT_IQ_WIDTH;
+        MAGNITUDE_WIDTH        : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1;
+        BUFFER_LENGTH          : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
+        --CORRELATION_WIDTH      : integer := (ADSB_DEFAULT_IQ_WIDTH * 2 + 1) + integer(ceil(log2(real(ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH))));
         PREAMBLE_POSITION1     : integer := 20;
         PREAMBLE_POSITION2     : integer := 70;
         PREAMBLE_POSITION3     : integer := 90
@@ -19,32 +20,34 @@ entity preamble_detector is
         ce_i : in std_logic; -- Clock enable.
         i_i : in signed(IQ_WIDTH-1 downto 0);
         q_i : in signed(IQ_WIDTH-1 downto 0);
+        mag_sq_i : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
 
-        detect_o : out std_logic := '0';
-        mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        high_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        low_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
         i_o : out signed(IQ_WIDTH-1 downto 0);
-        q_o : out signed(IQ_WIDTH-1 downto 0)
+        q_o : out signed(IQ_WIDTH-1 downto 0);
+        mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        win_inside_energy_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        win_outside_energy_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0)
     );
-end preamble_detector;
+end preamble_window;
 
-architecture rtl of preamble_detector is
+architecture rtl of preamble_window is
     -- Clock enable.
     signal ce_c : std_logic := '0';
 
-    -- How many samples the IQ stream is delayed by compared to when the preamble is detected.
-    constant PIPELINE_DELAY : integer := 6;
+    -- Accumulator width for window correlation.
+    constant CORRELATION_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
 
-    constant CORRELATION_WIDTH : integer := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
+    -- Number of symbols in the preamble.
+    constant NUM_SYMBOLS_IN_PREAMBLE : positive := 16;
+
+    -- How many samples the IQ stream is delayed by compared to when the preamble is detected.
+    constant PIPELINE_DELAY : positive := 6;
 
     -- Combinatorial port signals.
     signal i_c, q_c : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal mag_sq_c : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-
-    -- Envelope detector signals. IQ and magnitude squared.
-    signal env_i, env_q : signed(IQ_WIDTH-1 downto 0);
-    signal env_mag_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+    signal win_inside_energy_c : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal win_outside_energy_c : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
 
     -- Where each pulse in the preamble starts.
     -- There are four pulses in the preamble of an ADS-B message.
@@ -65,20 +68,22 @@ architecture rtl of preamble_detector is
     -- preamble and is used for preamble detection.
     -- The IQ buffer is for timing and is as long as the number of delay clock
     -- cycles of this component.
-    type mag_sq_buffer_t is array (natural range <>) of unsigned(MAGNITUDE_WIDTH-1 downto 0);
-    type iq_buffer_t is array (natural range <>) of signed(IQ_WIDTH-1 downto 0);
+    subtype mag_sample_t is unsigned(MAGNITUDE_WIDTH-1 downto 0);
+    type mag_sq_buffer_t is array (natural range <>) of mag_sample_t;
     signal shift_reg : mag_sq_buffer_t(0 to BUFFER_LENGTH-1) := (others => (others => '0'));
+
+    -- Window register.
+    type window_t is array (natural range <>) of mag_sq_buffer_t(0 to SAMPLES_PER_SYMBOL-1);
+    signal window_reg : window_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => (others => '0')));
+
+    -- Delay pipeline for IQ.
+    type iq_buffer_t is array (natural range <>) of signed(IQ_WIDTH-1 downto 0);
     signal i_reg : iq_buffer_t(0 to PIPELINE_DELAY-1) := (others => (others => '0'));
     signal q_reg : iq_buffer_t(0 to PIPELINE_DELAY-1) := (others => (others => '0'));
 
     -- Signals for computation of correlation windows.
     signal correlation : signed(CORRELATION_WIDTH-1 downto 0) := (others => '0');
     signal energy : unsigned(CORRELATION_WIDTH-1 downto 0) := (others => '0');
-
-    type unsigned_hist_5_t is array (0 to 4) of unsigned(CORRELATION_WIDTH-1 downto 0);
-
-    signal high_threshold_c : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal low_threshold_c : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
 
     function max_over_preamble(sr : mag_sq_buffer_t) return unsigned is
         variable m       : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
@@ -103,42 +108,22 @@ architecture rtl of preamble_detector is
     end function;
 
 begin
-    -- Magnitude-squared envelope detector.
-    envelope : entity work.adsb_envelope
-        generic map (
-            IQ_WIDTH        => IQ_WIDTH,
-            MAGNITUDE_WIDTH => MAGNITUDE_WIDTH
-        )
-        port map (
-            clk      => clk,
-            ce_i     => ce_i,
-            i_i      => i_i,
-            q_i      => q_i,
-            mag_sq_o => env_mag_sq,
-            i_o      => env_i,
-            q_o      => env_q
-        );
-
     -- Combinatorial signals.
     ce_c <= ce_i;
-    high_threshold_o <= high_threshold_c;
-    low_threshold_o <= low_threshold_c;
     i_o <= i_c;
     q_o <= q_c;
     mag_sq_o <= mag_sq_c;
 
-    trigger_process : process(clk)
-        variable sum_energy : unsigned(CORRELATION_WIDTH-1 downto 0);
-
-        variable tmp_sym : symbol_energy_t;
-        variable idx_sym : integer;
+    buffer_process : process(clk)
     begin
         if rising_edge(clk) then
             if ce_c = '1' then
                 -- Append most recently arrived sample onto the end of the shift register.
-                shift_reg(BUFFER_LENGTH-1) <= env_mag_sq;
-                i_reg(PIPELINE_DELAY-1) <= env_i;
-                q_reg(PIPELINE_DELAY-1) <= env_q;
+                shift_reg(BUFFER_LENGTH-1) <= mag_sq_i;
+                i_reg(PIPELINE_DELAY-1) <= i_i;
+                q_reg(PIPELINE_DELAY-1) <= q_i;
+                
+                -- Shift register.
                 for i in 0 to BUFFER_LENGTH-2 loop
                     shift_reg(i) <= shift_reg(i+1);
                 end loop;
@@ -146,7 +131,31 @@ begin
                     i_reg(i) <= i_reg(i+1);
                     q_reg(i) <= q_reg(i+1);
                 end loop;
+            end if;
+        end if;
+    end process buffer_process;
 
+    -- Register symbol windows from the buffer before passing into the DSP.
+    symbol_register_process : process(clk)
+    begin
+        if rising_edge(clk) then
+            if ce_c = '1' then
+                for i in 0 to NUM_SYMBOLS_IN_PREAMBLE-1 loop
+                    for j in 0 to SAMPLES_PER_SYMBOL-1 loop
+                        window_reg(i)(j) <= shift_reg(i * SAMPLES_PER_SYMBOL + j);
+                    end loop;
+                end loop;
+            end if;
+        end if;
+    end process symbol_register_process;
+
+    symbol_energy_process : process(clk)
+        variable sum_energy : unsigned(CORRELATION_WIDTH-1 downto 0);
+        variable tmp_sym : symbol_energy_t;
+        variable idx_sym : integer;
+    begin
+        if rising_edge(clk) then
+            if ce_c = '1' then
                 -- Zero local accumulators.
                 for j in 0 to PREAMBLE_POSITION'length-1 loop
                     tmp_sym(j) := (others => '0');
@@ -170,61 +179,10 @@ begin
                     sum_energy := sum_energy + resize(shift_reg(BUFFER_LENGTH-i-1), sum_energy'length);
                 end loop;
                 energy <= sum_energy;
+
             end if;
         end if;
-    end process trigger_process;
-
-    detect_process : process(clk)
-        variable all_thresholds_ok : boolean := false;
-        variable threshold : unsigned(energy'length-1 downto 0);
-        variable local_detect : boolean := false;
-        variable energy_history : unsigned_hist_5_t;
-        variable max_magnitude : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-    begin
-        if rising_edge(clk) then
-            if ce_c = '1' then
-                threshold := resize((energy * to_unsigned(3, energy'length+2)) srl 4, energy'length);
-                all_thresholds_ok := true;
-                for i in PREAMBLE_POSITION'range loop
-                    if resize(sym_energy(i), energy'length) <= threshold then
-                        all_thresholds_ok := false;
-                    end if;
-                end loop;
-
-                if all_thresholds_ok then
-                    local_detect := true;
-                else
-                    local_detect := false;
-                end if;
-
-                energy_history(4) := energy_history(3);
-                energy_history(3) := energy_history(2);
-                energy_history(2) := energy_history(1);
-                energy_history(1) := energy_history(0);
-                if local_detect then
-                    energy_history(0) := energy;
-                else
-                    energy_history(0) := (others => '0');
-                end if;
-
-                if energy_history(2) > 0 then
-                    if (energy_history(2) > energy_history(0)) and
-                       (energy_history(2) > energy_history(1)) and
-                       (energy_history(2) > energy_history(3)) and
-                       (energy_history(2) > energy_history(4)) then
-                        detect_o <= '1';
-                        max_magnitude := max_over_preamble(shift_reg);
-                        high_threshold_c <= max_magnitude srl 1;
-                        low_threshold_c <= max_magnitude srl 3;
-                    else
-                        detect_o <= '0';
-                    end if;
-                else
-                    detect_o <= '0';
-                end if;
-            end if;
-        end if;
-    end process detect_process;
+    end process symbol_energy_process;
 
     -- Passthrough signals delayed against the pipeline delay.
     -- These signals are useful for keeping everything synchronised, since
