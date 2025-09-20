@@ -101,9 +101,9 @@ uut_window : entity work.preamble_window
     end process verification_process;
 
     verify_synchronisation_process : process(clk)
-        variable i_sq_v : signed(IQ_WIDTH*2-1 downto 0);
-        variable q_sq_v : signed(IQ_WIDTH*2-1 downto 0);
-        variable mag_sq_v : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        variable i_sq_v : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
+        variable q_sq_v : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
+        variable mag_sq_v : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     begin
         if rising_edge(clk) then
             -- Ensure that IQ is synchronised with the envelope (magnitude squared.)
