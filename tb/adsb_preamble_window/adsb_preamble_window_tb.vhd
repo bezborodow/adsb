@@ -34,36 +34,38 @@ architecture test of adsb_preamble_window_tb is
 begin
     clk <= not clk after clk_period / 2;
     
-uut_window : entity work.preamble_window
-    generic map (
-        SAMPLES_PER_SYMBOL => 10,
-        IQ_WIDTH           => 12,
-        MAGNITUDE_WIDTH    => 25,
-        BUFFER_LENGTH      => 160,
-        PREAMBLE_POSITION1 => 20,
-        PREAMBLE_POSITION2 => 70,
-        PREAMBLE_POSITION3 => 90
-    )
-    port map (
-        clk                  => clk,
-        ce_i                 => ce_i,
-        i_i                  => i_i,
-        q_i                  => q_i,
-        mag_sq_i             => mag_sq_i,
-        i_o                  => i_o,
-        q_o                  => q_o,
-        mag_sq_o             => mag_sq_o,
-        win_inside_energy_o  => win_inside_energy_o,
-        win_outside_energy_o => win_outside_energy_o
-    );
-    
+    uut : entity work.preamble_window
+        generic map (
+            SAMPLES_PER_SYMBOL => 10,
+            IQ_WIDTH           => 12,
+            MAGNITUDE_WIDTH    => 25,
+            BUFFER_LENGTH      => 160,
+            PREAMBLE_POSITION1 => 20,
+            PREAMBLE_POSITION2 => 70,
+            PREAMBLE_POSITION3 => 90
+        )
+        port map (
+            clk                  => clk,
+            ce_i                 => ce_i,
+            i_i                  => i_i,
+            q_i                  => q_i,
+            mag_sq_i             => mag_sq_i,
+            i_o                  => i_o,
+            q_o                  => q_o,
+            mag_sq_o             => mag_sq_o,
+            win_inside_energy_o  => win_inside_energy_o,
+            win_outside_energy_o => win_outside_energy_o
+        );
+
     stimulus_process : process
         file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
         variable line_buf : line;
         variable line_i, line_q : integer;
-        variable i_sq_v : signed(IQ_WIDTH*2-1 downto 0);
-        variable q_sq_v : signed(IQ_WIDTH*2-1 downto 0);
-        variable mag_sq_v : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        variable i_v : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+        variable q_v : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+        variable i_sq_v : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
+        variable q_sq_v : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
+        variable mag_sq_v : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     begin
         test_runner_setup(runner, runner_cfg);
         while not endfile(iq_file) loop
@@ -71,11 +73,13 @@ uut_window : entity work.preamble_window
             read(line_buf, line_i);
             read(line_buf, line_q);
 
-            i_i <= to_signed(line_i, 12);
-            q_i <= to_signed(line_q, 12);
-            i_sq_v := i_o * i_o;
-            q_sq_v := q_o * q_o;
+            i_v := to_signed(line_i, 12);
+            q_v := to_signed(line_q, 12);
+            i_sq_v := i_v * i_v;
+            q_sq_v := q_v * q_v;
             mag_sq_v := resize(unsigned(i_sq_v), mag_sq_v'length) + resize(unsigned(q_sq_v), mag_sq_v'length);
+            i_i <= i_v;
+            q_i <= q_v;
             mag_sq_i <= mag_sq_v;
 
             wait for clk_period;
@@ -110,9 +114,7 @@ uut_window : entity work.preamble_window
             i_sq_v := i_o * i_o;
             q_sq_v := q_o * q_o;
             mag_sq_v := resize(unsigned(i_sq_v), mag_sq_v'length) + resize(unsigned(q_sq_v), mag_sq_v'length);
-
-            -- TODO enable checks.
-            --check_equal(mag_sq_o, mag_sq_v, "Magnitude squared mismatch. (Pipeline might be out of sync.)");
+            check_equal(mag_sq_o, mag_sq_v, "Magnitude squared mismatch. (Pipeline might be out of sync.)");
         end if;
     end process verify_synchronisation_process;
 end test;
