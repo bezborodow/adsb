@@ -9,6 +9,7 @@ save_project_as $project_name -force
 
 # Add in the custom IP cores.
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb.vhd
+add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_envelope.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_fifo.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_pkg.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_serialiser.vhd
@@ -23,7 +24,7 @@ add_files -fileset sources_1 -norecurse ../ip/uart/uart_tx_enc.vhd
 
 import_files -force -norecurse
 update_compile_order -fileset sources_1
-report_compile_order -fileset sources_1
+#report_compile_order -fileset sources_1
 set_property top system_top [current_fileset]
 get_files
 

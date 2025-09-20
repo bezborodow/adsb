@@ -41,22 +41,22 @@ architecture rtl of freq_est is
     signal enable : std_logic := '0';
 
     -- Internal registers.
-    signal vld_r : std_logic := '0';
-    signal ce_r : std_logic := '0';
-    signal est_re_r : signed(31 downto 0) := (others => '0');
-    signal est_im_r : signed(31 downto 0) := (others => '0');
+    signal vld_c : std_logic := '0';
+    signal ce_c : std_logic := '0';
+    signal est_re_c : signed(31 downto 0) := (others => '0');
+    signal est_im_c : signed(31 downto 0) := (others => '0');
 
 begin
-    vld_o <= vld_r;
-    ce_r <= ce_i;
-    est_re_o <= est_re_r;
-    est_im_o <= est_im_r;
+    vld_o <= vld_c;
+    ce_c <= ce_i;
+    est_re_o <= est_re_c;
+    est_im_o <= est_im_c;
 
     -- Delayed signals.
     delay_process : process(clk)
     begin
         if rising_edge(clk) then
-            if ce_r = '1' then
+            if ce_c = '1' then
                 i_z1 <= i_i;
                 q_z1 <= q_i;
                 gate_z1 <= gate_i;
@@ -75,11 +75,11 @@ begin
             accumulator_im <= (others => '0');
             accumulation_count <= (others => '0');
             enable <= '0';
-            vld_r <= '0';
+            vld_c <= '0';
         end procedure reset_procedure;
     begin
         if rising_edge(clk) then
-            if ce_r = '1' then
+            if ce_c = '1' then
                 -- Reset on start.
                 if start_i = '1' then
                     reset_procedure;
@@ -100,9 +100,9 @@ begin
                 if to_integer(accumulation_count) = ACCUMULATION_LENGTH-1 then
                     if enable = '1' and accumulation_count > 0 then
                         -- Resize to a smaller complex number.
-                        est_re_r <= resize(shift_right(accumulator_re, accumulator_re'length - est_re_r'length), est_re_r'length);
-                        est_im_r <= resize(shift_right(accumulator_im, accumulator_im'length - est_im_r'length), est_im_r'length);
-                        vld_r <= '1';
+                        est_re_c <= resize(shift_right(accumulator_re, accumulator_re'length - est_re_c'length), est_re_c'length);
+                        est_im_c <= resize(shift_right(accumulator_im, accumulator_im'length - est_im_c'length), est_im_c'length);
+                        vld_c <= '1';
                     end if;
                     enable <= '0';
                 end if;
@@ -110,13 +110,13 @@ begin
                 -- Stop upon external stop signal.
                 if stop_i = '1' then
                     if enable = '1' and to_integer(accumulation_count) > 0 then
-                        vld_r <= '1';
+                        vld_c <= '1';
                     end if;
                     enable <= '0';
                 end if;
 
                 -- Reset when data has been read.
-                if vld_r = '1' and rdy_i = '1' then
+                if vld_c = '1' and rdy_i = '1' then
                     reset_procedure;   
                 end if;
             end if;

@@ -25,25 +25,24 @@ architecture rtl of ppm_demod is
     signal edge_timer : unsigned(15 downto 0) := (others => '0');
     signal envelope_z1 : std_logic := '0';
     signal start_demod : std_logic := '0';
-    signal data_r : std_logic_vector(111 downto 0) := (others => '0');
-    signal malformed_r : std_logic := '0';
-    signal valid_r : std_logic := '0';
-    signal w56_r : std_logic := '0';
-    signal ce_r : std_logic := '0';
+    signal data_c : std_logic_vector(111 downto 0) := (others => '0');
+    signal malformed_c : std_logic := '0';
+    signal valid_c : std_logic := '0';
+    signal w56_c : std_logic := '0';
+    signal ce_c : std_logic := '0';
 begin
-
-    data_o <= data_r;
-    malformed_o <= malformed_r;
-    vld_o <= valid_r;
-    w56_o <= w56_r;
-    ce_r <= ce_i;
+    data_o <= data_c;
+    malformed_o <= malformed_c;
+    vld_o <= valid_c;
+    w56_o <= w56_c;
+    ce_c <= ce_i;
 
     timing_process : process(clk)
         variable input_rising : std_logic := '0';
         variable input_falling : std_logic := '0';
     begin
         if rising_edge(clk) then
-            if ce_r = '1' then
+            if ce_c = '1' then
                 if detect_i = '1' then
                     edge_timer <= (others => '0');
                     start_demod <= '1';
@@ -80,15 +79,15 @@ begin
         variable invalid_symbol : boolean := false;
     begin
         if rising_edge(clk) then
-            if ce_r = '1' and valid_r = '0' then
+            if ce_c = '1' and valid_c = '0' then
                 if start_demod = '1' then
                     pulse_position := "1";
                     index := (others => '0');
-                    malformed_r <= '0';
-                    valid_r <= '0';
-                    data_r <= (others => '0');
-                    w56_r <= '0';
-                elsif malformed_r = '0' then
+                    malformed_c <= '0';
+                    valid_c <= '0';
+                    data_c <= (others => '0');
+                    w56_c <= '0';
+                elsif malformed_c = '0' then
                     do_sample := false;
                     if edge_timer = HALF_SPS-1 then
                         pulse_position := not pulse_position;
@@ -100,10 +99,10 @@ begin
                     end if;
                     if edge_timer = HALF_SPS*5-1 then
                         if index = 56 and envelope_z1 = '0' then
-                            valid_r <= '1';
-                            w56_r <= '1';
+                            valid_c <= '1';
+                            w56_c <= '1';
                         else
-                            malformed_r <= '1';
+                            malformed_c <= '1';
                         end if;
                     end if;
 
@@ -120,26 +119,26 @@ begin
                             end if;
                             if not invalid_symbol then
                                 -- Shift into LSB.
-                                data_r <= data_r(110 downto 0) & sample;
+                                data_c <= data_c(110 downto 0) & sample;
                                 if index = 111 then
-                                    valid_r <= '1';
+                                    valid_c <= '1';
                                 end if;
                                 index := index + 1;
                             elsif invalid_symbol and index = 56 then
-                                valid_r <= '1';
-                                w56_r <= '1';
+                                valid_c <= '1';
+                                w56_c <= '1';
                             else
-                                malformed_r <= '1';
+                                malformed_c <= '1';
                             end if;
                         end if;
                     end if;
                 end if;
             end if;
 
-            if ce_r = '1' and valid_r = '1' and rdy_i = '1' then
-                valid_r <= '0';
-                data_r <= (others => '0');
-                w56_r <= '0';
+            if ce_c = '1' and valid_c = '1' and rdy_i = '1' then
+                valid_c <= '0';
+                data_c <= (others => '0');
+                w56_c <= '0';
             end if;
         end if;
 

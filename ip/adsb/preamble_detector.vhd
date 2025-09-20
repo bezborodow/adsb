@@ -30,7 +30,7 @@ end preamble_detector;
 
 architecture rtl of preamble_detector is
     -- Clock enable.
-    signal ce_r : std_logic := '0';
+    signal ce_c : std_logic := '0';
 
     -- How many samples the IQ stream is delayed by compared to when the preamble is detected.
     -- TODO Write testbench to ensure that pipeline delay is correct.
@@ -101,14 +101,14 @@ architecture rtl of preamble_detector is
     end function;
 
 begin
-    ce_r <= ce_i;
+    ce_c <= ce_i;
     high_threshold_o <= high_threshold_r;
     low_threshold_o <= low_threshold_r;
 
     mag_sq_process : process(clk)
     begin
         if rising_edge(clk) then
-            if ce_r = '1' then
+            if ce_c = '1' then
                 -- Calculate magnitude squared.
                 -- Use registers to improve timing for DSP.
                 i_r <= i_i;
@@ -129,7 +129,7 @@ begin
         constant THRESHOLD_SCALE : unsigned(CORRELATION_WIDTH-1 downto 0) := to_unsigned(1000000000, CORRELATION_WIDTH);
     begin
         if rising_edge(clk) then
-            if ce_r = '1' then
+            if ce_c = '1' then
                 -- Append most recently arrived sample onto the end of the shift register.
                 shift_reg(BUFFER_LENGTH-1) <= magnitude_sq;
                 i_reg(PIPELINE_DELAY-1) <= i_i;
@@ -177,7 +177,7 @@ begin
         variable max_magnitude : unsigned(MAGNITUDE_WIDTH-1 downto 0);
     begin
         if rising_edge(clk) then
-            if ce_r = '1' then
+            if ce_c = '1' then
                 threshold := resize((energy * to_unsigned(3, energy'length+2)) srl 4, energy'length);
                 all_thresholds_ok := true;
                 for i in PREAMBLE_POSITION'range loop
@@ -227,7 +227,7 @@ begin
     delay_process : process(clk)
     begin
         if rising_edge(clk) then
-            if ce_r = '1' then
+            if ce_c = '1' then
                 i_o <= i_reg(0);
                 q_o <= q_reg(0);
                 mag_sq_o <= shift_reg(BUFFER_LENGTH - PIPELINE_DELAY);

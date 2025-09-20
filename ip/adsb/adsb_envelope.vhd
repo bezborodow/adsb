@@ -23,11 +23,12 @@ end adsb_envelope;
 architecture rtl of adsb_envelope is
     -- Clock enable.
     signal ce_c : std_logic := '0';
+    constant SQ_WIDTH : positive := IQ_WIDTH * 2;
 
     -- Magnitude squared calculation.
-    signal i_r, q_r, i_z2, q_z2, i_z3, q_z3, i_z4, q_z4 : signed(IQ_WIDTH-1 downto 0);
-    signal i_sq, q_sq : signed(IQ_WIDTH*2-1 downto 0);
-    signal mag_sq_r, mag_sq_z1 : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+    signal i_r, q_r, i_z2, q_z2, i_z3, q_z3, i_z4, q_z4 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal i_sq, q_sq : signed(SQ_WIDTH-1 downto 0) := (others => '0');
+    signal mag_sq_r, mag_sq_z1 : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
 begin
     -- Combinatorial signals.
     ce_c <= ce_i;
