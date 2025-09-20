@@ -34,15 +34,11 @@ architecture test of adsb_preamble_window_tb is
 begin
     clk <= not clk after clk_period / 2;
     
-    uut : entity work.preamble_window
+    uut : entity work.adsb_preamble_window
         generic map (
             SAMPLES_PER_SYMBOL => 10,
             IQ_WIDTH           => 12,
-            MAGNITUDE_WIDTH    => 25,
-            BUFFER_LENGTH      => 160,
-            PREAMBLE_POSITION1 => 20,
-            PREAMBLE_POSITION2 => 70,
-            PREAMBLE_POSITION3 => 90
+            MAGNITUDE_WIDTH    => 25
         )
         port map (
             clk                  => clk,
@@ -99,6 +95,8 @@ begin
         if rising_edge(clk) then
             if end_of_test and not done then
                 -- TODO Check data.
+                -- TODO The way to test this is to ensure that the highest ratio of energy inside versus outside occurs
+                -- just before the message begins. Also check total energy and do not divide by zero.
                 --report "Did not receive all expected data." severity failure;
             end if;
         end if;

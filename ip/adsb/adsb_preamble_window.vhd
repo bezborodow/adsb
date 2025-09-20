@@ -4,16 +4,11 @@ use ieee.numeric_std.all;
 use ieee.math_real.all;
 use work.adsb_pkg.all;
 
-entity preamble_window is
+entity adsb_preamble_window is
     generic (
         SAMPLES_PER_SYMBOL     : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
         IQ_WIDTH               : integer := ADSB_DEFAULT_IQ_WIDTH;
-        MAGNITUDE_WIDTH        : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1;
-        BUFFER_LENGTH          : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
-        --CORRELATION_WIDTH      : integer := (ADSB_DEFAULT_IQ_WIDTH * 2 + 1) + integer(ceil(log2(real(ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH))));
-        PREAMBLE_POSITION1     : integer := 20;
-        PREAMBLE_POSITION2     : integer := 70;
-        PREAMBLE_POSITION3     : integer := 90
+        MAGNITUDE_WIDTH        : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1
     );
     port (
         clk : in std_logic;
@@ -29,9 +24,12 @@ entity preamble_window is
         win_inside_energy_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
         win_outside_energy_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0)
     );
-end preamble_window;
+end adsb_preamble_window;
 
-architecture rtl of preamble_window is
+architecture rtl of adsb_preamble_window is
+    -- Length of the preamble buffer.
+    constant BUFFER_LENGTH : positive := 16 * SAMPLES_PER_SYMBOL;
+
     -- Accumulator width for window correlation.
     constant CORRELATION_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
 
@@ -46,7 +44,8 @@ architecture rtl of preamble_window is
 
     -- Where each pulse in the preamble starts.
     -- There are four pulses in the preamble of an ADS-B message.
-    constant PREAMBLE_POSITION : adsb_int_array_t := (0, 2, 7, 9);
+    -- TODO This is not used at the moment. Bring it back?
+    --constant PREAMBLE_POSITION : adsb_int_array_t := (0, 2, 7, 9);
 
     -- Buffers for magnitude-squared and IQ samples.
     -- Magnitude buffer length is as long as the number of samples in the
