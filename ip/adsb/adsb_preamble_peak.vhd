@@ -41,22 +41,30 @@ architecture rtl of adsb_preamble_peak is
         q             : signed(IQ_WIDTH-1 downto 0);
         mag_sq        : unsigned(MAGNITUDE_WIDTH-1 downto 0);
         max_mag_sq    : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_ei        : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_eo        : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_et        : unsigned(MAGNITUDE_WIDTH downto 0);
+        win_ei        : unsigned(win_inside_energy_i'length-1 downto 0);
+        win_eo        : unsigned(win_outside_energy_i'length-1 downto 0);
         thresholds_ok : std_logic;
     end record;
     
     type windowed_sample_record_array_t is array (natural range <>) of windowed_sample_record_t;
-
-    -- type unsigned_hist_5_t is array (0 to 4) of unsigned(CORRELATION_WIDTH-1 downto 0);
+    signal history_a : windowed_sample_record_array_t(0 to RECORD_ARRAY_LENGTH-1);
 begin
 
     history_buffer_process : process(clk)
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
-                -- TODO Register inputs into buffer.
+                -- Register inputs into buffer.
+                for i in RECORD_ARRAY_LENGTH-1 downto 1 loop
+                    history_a(i) <= history_a(i-1);
+                end loop;
+                history_a(0).i             <= i_i;
+                history_a(0).q             <= q_i;
+                history_a(0).mag_sq        <= mag_sq_i;
+                history_a(0).max_mag_sq    <= max_mag_sq_i;
+                history_a(0).win_ei        <= win_inside_energy_i;
+                history_a(0).win_eo        <= win_outside_energy_i;
+                history_a(0).thresholds_ok <= all_thresholds_ok_i;
             end if;
         end if;
     end process history_buffer_process;
