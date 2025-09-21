@@ -62,8 +62,8 @@ architecture rtl of adsb_preamble_peak is
     constant K_MAX : natural := RECORD_ARRAY_LENGTH - 2;
     subtype energy_product_t is unsigned(win_inside_energy_i'length*2-1 downto 0);
     type energy_product_array_t is array (0 to K_MAX) of energy_product_t;
-    signal lhs_r : energy_product_array_t := (others => (others => '0'));
-    signal rhs_r : energy_product_array_t := (others => (others => '0'));
+    signal lhs_r, lhs_z1 : energy_product_array_t := (others => (others => '0'));
+    signal rhs_r, rhs_z1 : energy_product_array_t := (others => (others => '0'));
 
     -- Is A greater than B?
     -- Centre record greater than its neighbours for each neighbour?
@@ -72,13 +72,14 @@ architecture rtl of adsb_preamble_peak is
     -- Delay of threshold signal to keep things in sync.
     signal thres_ok_z1 : std_logic := '0';
     signal thres_ok_z2 : std_logic := '0';
+    signal thres_ok_z3 : std_logic := '0';
 
     -- Registered signals for outputs.
-    signal i_r          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal q_r          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal mag_sq_r     : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal max_mag_sq_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal detect_r     : std_logic := '0';
+    signal i_r, i_z3 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal q_r, q_z3 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal mag_sq_r, mag_sq_z3 : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal max_mag_sq_r, max_mag_sq_z3 : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal detect_r : std_logic := '0';
 
     -- Check that all bits in a standard logic vector are '1'.
     function all_bits_high(v : std_logic_vector) return boolean is
@@ -138,6 +139,7 @@ begin
 
                 thres_ok_z1 <= centre_v.thresholds_ok;
                 thres_ok_z2 <= thres_ok_z1;
+                thres_ok_z3 <= thres_ok_z2;
                 for i in history_a'range loop
 
                     -- Skip centre record.
@@ -148,11 +150,15 @@ begin
                         -- are okay.
                         --
                         -- The formula is:
+                        --
                         --     E_ai / E_ao > E_bi / E_bo;
                         --
-                        -- Using cross-multiplication: 
+                        -- Using cross-multiplication:
                         --
                         --     E_ai * E_bo > E_bi * E_ao
+                        --
+                        -- Where 'E' is energy, subscript 'a' is centre, 'b' is neighbour,
+                        -- subscript 'i' is inside, and 'o' is outside.
                         --
                         -- This needs to be registered for the DSP in stages.
                         eai_v := centre_v.win_ei;
@@ -160,26 +166,33 @@ begin
                         ebi_v := history_a(i).win_ei;
                         ebo_v := history_a(i).win_eo;
 
+                        -- DSP multiplication, left-hand side (LHS) and right-hand side (RHS.)
                         lhs_r(k) <= eai_v * ebo_v;
                         rhs_r(k) <= ebi_v * eao_v;
-                        -- TODO register between multiply and comparison.
-                        if lhs_r(k) > rhs_r(k) then
-                            agtb_r(k) <= '1';
+
+                        -- Register between multiply and comparison for DSP.
+                        lhs_z1(k) <= lhs_r(k);
+                        rhs_z1(k) <= rhs_r(k);
+
+                        -- Comparison.
+                        if lhs_z1(k) > rhs_z1(k) then
+                            agtb_r(k) <= '1'; -- A is greater than B (AGTB.)
                         else
                             agtb_r(k) <= '0';
                         end if;
 
+                        -- Check next kth neighbour.
                         if k < K_MAX then
                             k := k + 1;
                         end if;
                     end if;
                 end loop;
-                
+
                 -- Register the detect strobe if all conditions are met.
                 -- If the record is greater than its neighbours and thresholds are okay.
                 -- There is two cycles of delay (z2) prior to this operation that
                 -- needs to be accounted for.
-                if all_bits_high(agtb_r) and (thres_ok_z2 = '1') then
+                if all_bits_high(agtb_r) and (thres_ok_z3 = '1') then
                     detect_r <= '1';
                 else
                     detect_r <= '0';
@@ -194,10 +207,16 @@ begin
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
-                i_r          <= history_a(CENTRE_RECORD + DELAY_OFFSET).i;
-                q_r          <= history_a(CENTRE_RECORD + DELAY_OFFSET).q;
-                mag_sq_r     <= history_a(CENTRE_RECORD + DELAY_OFFSET).mag_sq;
-                max_mag_sq_r <= history_a(CENTRE_RECORD + DELAY_OFFSET).max_mag_sq;
+                i_z3          <= history_a(CENTRE_RECORD + DELAY_OFFSET).i;
+                q_z3          <= history_a(CENTRE_RECORD + DELAY_OFFSET).q;
+                mag_sq_z3     <= history_a(CENTRE_RECORD + DELAY_OFFSET).mag_sq;
+                max_mag_sq_z3 <= history_a(CENTRE_RECORD + DELAY_OFFSET).max_mag_sq;
+
+                -- The delay is actually more than the buffer, so need an additional register.
+                i_r          <= i_z3;
+                q_r          <= q_z3;
+                mag_sq_r     <= mag_sq_z3;
+                max_mag_sq_r <= max_mag_sq_z3;
             end if;
         end if;
     end process delay_process;
