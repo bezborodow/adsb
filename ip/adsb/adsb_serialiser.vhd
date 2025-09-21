@@ -98,11 +98,11 @@ begin
         variable buffer_index_n : integer range 0 to MAX_MESSAGE_BYTES-1;
         variable buffer_ready_n : std_logic;
     begin
-        slave_valid_n := s_vld_c;
-        buffer_index_n := buffer_index;
-        buffer_ready_n := buffer_ready;
-
         if rising_edge(clk) then
+            slave_valid_n := s_vld_c;
+            buffer_index_n := buffer_index;
+            buffer_ready_n := buffer_ready;
+
             -- If currently sending data from the buffer.
             if buffer_ready_n = '0' then
                 -- Increment index only if downstream is ready.
