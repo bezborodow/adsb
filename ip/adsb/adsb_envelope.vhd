@@ -32,8 +32,8 @@ architecture rtl of adsb_envelope is
     signal ce_c : std_logic := '0';
 
     -- Magnitude squared calculation.
-    signal i_z1, q_z1, i_z2, q_z2, i_z3, q_z3 : iq_t := (others => '0');
-    signal i_sq, q_sq : squared_t := (others => '0');
+    signal i_z1, q_z1, i_z2, q_z2, i_z3, q_z3, i_z4, q_z4 : iq_t := (others => '0');
+    signal i_sq, q_sq, i_sq_z1, q_sq_z1 : squared_t := (others => '0');
     signal mag_sq_z0 : mag_sq_t := (others => '0');
 
     -- Output registers.
@@ -63,17 +63,21 @@ begin
                 i_z2 <= i_z1;
                 q_z2 <= q_z1;
 
-                -- TODO Might need another pipeline register here before the resize and addition.
-
-                -- Third delay. Addition.
-                mag_sq_z0 <= resize(unsigned(i_sq), mag_sq_r'length) + resize(unsigned(q_sq), mag_sq_r'length);
+                -- Another pipeline register after the DSP and before the resize and addition.
+                i_sq_z1 <= i_sq;
+                q_sq_z1 <= q_sq;
                 i_z3 <= i_z2;
                 q_z3 <= q_z2;
 
+                -- Third delay. Addition.
+                mag_sq_z0 <= resize(unsigned(i_sq_z1), mag_sq_r'length) + resize(unsigned(q_sq_z1), mag_sq_r'length);
+                i_z4 <= i_z3;
+                q_z4 <= q_z3;
+
                 -- Fourth delay. Output register.
                 mag_sq_r <= mag_sq_z0;
-                i_r <= i_z3;
-                q_r <= q_z3;
+                i_r <= i_z4;
+                q_r <= q_z4;
             end if;
         end if;
     end process mag_sq_process;

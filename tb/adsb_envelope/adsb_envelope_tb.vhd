@@ -14,7 +14,7 @@ architecture test of adsb_envelope_tb is
 
     constant IQ_WIDTH : integer := 12;
     constant MAG_SQ_WIDTH : integer := IQ_WIDTH * 2 + 1;
-    constant PIPELINE_DELAY : positive := 3;
+    constant PIPELINE_DELAY : positive := 4;
 
     signal ce_i      : std_logic := '1';
     signal i_i, q_i  : signed(IQ_WIDTH-1 downto 0) := (others => '0');
