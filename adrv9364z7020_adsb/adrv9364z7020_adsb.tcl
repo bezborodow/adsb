@@ -11,6 +11,7 @@ save_project_as $project_name -force
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_envelope.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_preamble_window.vhd
+add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_preamble_peak.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_fifo.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_pkg.vhd
 add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_serialiser.vhd
