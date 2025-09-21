@@ -35,13 +35,14 @@ architecture rtl of adsb_uart is
     signal led_r : std_logic := '0';
 
     -- ADSB demodalator and frequency estimator signals.
-    signal adsb_detect: std_logic := '0';
-    signal adsb_vld: std_logic := '0';
-    signal adsb_rdy: std_logic := '0';
-    signal adsb_w56 : std_logic := '0';
-    signal adsb_data : std_logic_vector(111 downto 0) := (others => '0');
-    signal adsb_re : signed(31 downto 0) := (others => '0');
-    signal adsb_im : signed(31 downto 0) := (others => '0');
+    signal adsb_detect       : std_logic := '0';
+    signal adsb_vld          : std_logic := '0';
+    signal adsb_rdy          : std_logic := '0';
+    signal adsb_w56          : std_logic := '0';
+    signal adsb_data         : std_logic_vector(111 downto 0) := (others => '0');
+    signal adsb_re           : signed(31 downto 0) := (others => '0');
+    signal adsb_im           : signed(31 downto 0) := (others => '0');
+    signal adsb_fifo_wr_data : std_logic_vector(ADSB_FIFO_WIDTH-1 downto 0); -- Holds packed data for the FIFO.
 
     -- FIFO read side signals.
     signal fifo_rd_data  : std_logic_vector(ADSB_FIFO_WIDTH-1 downto 0);
@@ -78,7 +79,7 @@ architecture rtl of adsb_uart is
     signal uart_timer : natural range 0 to UART_TIMER_MAX-1 := UART_TIMER_MAX-1;
 
 begin
-    i_adsb : entity work.adsb
+    u_adsb : entity work.adsb
         generic map (
             SAMPLES_PER_SYMBOL     => SAMPLES_PER_SYMBOL,
             IQ_WIDTH               => IQ_WIDTH,
@@ -99,7 +100,7 @@ begin
             est_im_o => adsb_im
         );
 
-    i_adsb_fifo : entity work.adsb_fifo
+    u_adsb_fifo : entity work.adsb_fifo
         generic map (
             FIFO_WIDTH => ADSB_FIFO_WIDTH,
             FIFO_DEPTH => ADSB_FIFO_DEPTH
@@ -107,7 +108,7 @@ begin
         port map (
             clk        => clk,
             rst        => '0',
-            wr_data_i  => adsb_w56 & adsb_data & std_logic_vector(adsb_re) & std_logic_vector(adsb_im),
+            wr_data_i  => adsb_fifo_wr_data, -- This data is packed combinatorially for the FIFO.
             wr_vld_i   => adsb_vld,
             wr_rdy_o   => adsb_rdy,
             rd_data_o  => fifo_rd_data,
@@ -115,7 +116,7 @@ begin
             rd_rdy_i   => fifo_rd_rdy
         );
 
-    i_adsb_serialiser : entity work.adsb_serialiser
+    u_adsb_serialiser : entity work.adsb_serialiser
         port map (
             clk        => clk,
             m_vld_i    => fifo_rd_vld,
@@ -132,7 +133,7 @@ begin
             s_eom_o    => srl_s_eom
         );
 
-    i_uart_tx_enc : entity work.uart_tx_enc
+    u_uart_tx_enc : entity work.uart_tx_enc
         port map (
             clk => clk,
             m_vld_i => srl_s_vld,
@@ -145,7 +146,7 @@ begin
             s_data_o => enc_s_data
         );
 
-    i_uart_tx : entity work.uart_tx
+    u_uart_tx : entity work.uart_tx
         generic map (
             CLK_DIV => UART_CLK_DIV
         )
@@ -162,6 +163,9 @@ begin
     d_vld_r <= d_vld_i;
     uart_tx_o <= uart_tx;
     led_o <= led_r;
+
+    -- Combinatorial packing for FIFO write data.
+    adsb_fifo_wr_data <= adsb_w56 & adsb_data & std_logic_vector(adsb_re) & std_logic_vector(adsb_im);
 
     -- Combinatorial unpacking from FIFO read data.
     fifo_rd_w56_c  <= fifo_rd_data(176);
