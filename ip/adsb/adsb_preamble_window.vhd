@@ -178,14 +178,19 @@ begin
                     end loop;
                     symbol_energy_a(i) <= sym_accumulators(i);
 
-                    -- Find maximum value.
+                    -- Find maximum value of envelope.
                     -- TODO use PREAMBLE_POSITION or something like that?
                     if i = 0 or i = 2 or i = 7 or i = 9 then
                         max_mag_sq_v := (others => '0');
                         for j in 0 to SAMPLES_PER_SYMBOL-1 loop
-                            sample_v := symbol_reg(i)(j);
-                            if sample_v > max_mag_sq_v then
-                                max_mag_sq_v := sample_v;
+
+                            -- This can fail timing, so do not check every sample.
+                            -- Use modulo to only check every fourth sample.
+                            if j mod 4 = 2 then
+                                sample_v := symbol_reg(i)(j);
+                                if sample_v > max_mag_sq_v then
+                                    max_mag_sq_v := sample_v;
+                                end if;
                             end if;
                         end loop;
 
