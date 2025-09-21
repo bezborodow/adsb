@@ -60,9 +60,9 @@ architecture rtl of adsb is
     signal demod_rdy : std_logic := '0';
     signal demod_w56 : std_logic := '0';
     signal demod_data : std_logic_vector(111 downto 0) := (others => '0');
- 
+
 begin
-    detector : entity work.preamble_detector 
+    u_detector : entity work.preamble_detector
         generic map (
             SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL,
             IQ_WIDTH           => IQ_WIDTH,
@@ -82,8 +82,11 @@ begin
             q_o => detector_q,
             mag_sq_o => detector_mag_sq
         );
-    
-    trigger : entity work.schmitt_trigger
+
+    -- Schmitt trigger.
+    -- Used for demodulating the ADS-B signal and gating the frequency estimator.
+    -- Hysteresis thresholds are adjusted based on the magnitude of the preamble.
+    u_trigger : entity work.schmitt_trigger
         generic map (
             SIGNAL_WIDTH => MAGNITUDE_WIDTH
         )
@@ -97,14 +100,14 @@ begin
         );
 
     -- PPM demodulator.
-    demod : entity work.ppm_demod
+    u_demodulator : entity work.ppm_demod
         generic map (
             SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL
         )
         port map (
             clk => clk,
             ce_i => d_vld_r,
-            rdy_i => demod_rdy, -- TODO
+            rdy_i => demod_rdy,
             envelope_i => trigger_envelope,
             detect_i => detect,
             vld_o => demod_vld,
@@ -114,7 +117,7 @@ begin
         );
 
     -- Frequency estimator.
-    freq_est : entity work.freq_est
+    u_freq_est : entity work.freq_est
         generic map (
             IQ_WIDTH => IQ_WIDTH,
             ACCUMULATION_LENGTH => ACCUMULATION_LENGTH
@@ -124,8 +127,7 @@ begin
             ce_i => d_vld_r,
             gate_i => trigger_envelope,
             start_i => detect,
-            --stop_i => demod_malformed or demod_vld,
-            stop_i => '0', -- TODO
+            stop_i => '0', -- TODO This is unused.
             i_i => detector_i_z1,
             q_i => detector_q_z1,
             rdy_i => estimator_rdy,
@@ -155,12 +157,5 @@ begin
             end if;
         end if;
     end process main_process;
-
-    rdyvld_handshake_process : process(clk)
-    begin
-        if rising_edge(clk) then
-        end if;
-    end process rdyvld_handshake_process;
-
 end rtl;
 

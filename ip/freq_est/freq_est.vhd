@@ -34,7 +34,7 @@ architecture rtl of freq_est is
     signal i_z1 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal q_z1 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal gate_z1 : std_logic := '0';
-    
+
     signal accumulator_re : signed(ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
     signal accumulator_im : signed(ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
     signal accumulation_count : unsigned(integer(ceil(log2(real(ACCUMULATION_LENGTH))))-1 downto 0) := (others => '0');
@@ -117,7 +117,7 @@ begin
 
                 -- Reset when data has been read.
                 if vld_c = '1' and rdy_i = '1' then
-                    reset_procedure;   
+                    reset_procedure;
                 end if;
             end if;
         end if;

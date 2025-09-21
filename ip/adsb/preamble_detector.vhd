@@ -102,7 +102,7 @@ begin
         );
 
     -- Peak detector.
-    u_peak : entity work.adsb_preamble_peak
+    u_peak_detector : entity work.adsb_preamble_peak
         generic map (
             SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL,
             IQ_WIDTH           => IQ_WIDTH,
