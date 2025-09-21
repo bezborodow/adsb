@@ -41,7 +41,7 @@ architecture rtl of adsb_preamble_window is
     constant NUM_SYMBOLS_IN_PREAMBLE : positive := 16;
 
     -- How many samples the IQ stream is delayed by compared to when the preamble is detected.
-    constant PIPELINE_DELAY : positive := 5;
+    constant PIPELINE_DELAY : positive := 6;
 
     -- Where each pulse in the preamble starts.
     -- There are four pulses in the preamble of an ADS-B message.
@@ -179,7 +179,7 @@ begin
                     symbol_energy_a(i) <= sym_accumulators(i);
 
                     -- Find maximum value.
-                    -- TODO use PREAMBLE_POSITION.
+                    -- TODO use PREAMBLE_POSITION or something like that?
                     if i = 0 or i = 2 or i = 7 or i = 9 then
                         max_mag_sq_v := (others => '0');
                         for j in 0 to SAMPLES_PER_SYMBOL-1 loop
@@ -251,11 +251,15 @@ begin
     -- Find energy inside and outside preamble window.
     stage5_total_energy_process : process(clk)
     begin
-        stage5_max_mag_sq_r <= stage4_max_mag_sq_r;
-        stage5_win_inside_energy_r <= stage4_win_inside_energy_r;
-        stage5_win_outside_energy_r <= stage4_win_outside_energy_r;
-        stage5_win_total_energy_r <= stage4_win_inside_energy_r + stage4_win_outside_energy_r;
-        stage5_symbol_energy_a_r <= stage4_symbol_energy_a_r;
+        if rising_edge(clk) then
+            if ce_i = '1' then
+                stage5_max_mag_sq_r <= stage4_max_mag_sq_r;
+                stage5_win_inside_energy_r <= stage4_win_inside_energy_r;
+                stage5_win_outside_energy_r <= stage4_win_outside_energy_r;
+                stage5_win_total_energy_r <= stage4_win_inside_energy_r + stage4_win_outside_energy_r;
+                stage5_symbol_energy_a_r <= stage4_symbol_energy_a_r;
+            end if;
+        end if;
     end process stage5_total_energy_process;
 
     -- Threshold for each preamble high symbol.
