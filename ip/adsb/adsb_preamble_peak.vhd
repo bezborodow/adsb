@@ -80,6 +80,18 @@ architecture rtl of adsb_preamble_peak is
     signal max_mag_sq_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     signal detect_r     : std_logic := '0';
 
+    -- Check that all bits in a standard logic vector are '1'.
+    function all_bits_high(v : std_logic_vector) return boolean is
+    begin
+        for i in v'range loop
+            if v(i) /= '1' then
+                return false;
+            end if;
+        end loop;
+
+        return true;
+    end function;
+
 begin
     -- Drive outputs from registered signals.
     i_o          <= i_r;
@@ -166,7 +178,7 @@ begin
                 -- If the record is greater than its neighbours and thresholds are okay.
                 -- There is two cycles of delay (z2) prior to this operation that
                 -- needs to be accounted for.
-                if (and agtb_r = '1') and thres_ok_z2 = '1' then
+                if all_bits_high(agtb_r) and (thres_ok_z2 = '1') then
                     detect_r <= '1';
                 else
                     detect_r <= '0';
