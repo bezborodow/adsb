@@ -1,5 +1,18 @@
 # FPGA ADS-B Demodulator and Frequency Estimator
 
+## Building the Project
+
+Checkout [HDL reference design](https://github.com/analogdevicesinc/hdl) in the directory above.
+
+```
+git clone git@github.com:analogdevicesinc/hdl.git ../hdl
+cd adrv9364z7020_adsb/
+source /opt/Xilinx/Vivado/2023.2/settings64.sh
+make
+```
+
+Based on [ADRV9364Z7020 HDL Project](https://analogdevicesinc.github.io/hdl/projects/adrv9364z7020/).
+
 ## Building BOOT.BIN
 
 Get ELF from `bootgen_sysfiles.tgz` on BOOT partition of Kuiper Linux.

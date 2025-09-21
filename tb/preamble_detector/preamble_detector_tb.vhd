@@ -96,7 +96,6 @@ begin
             i_sq_v := i_o * i_o;
             q_sq_v := q_o * q_o;
             mag_sq_v := resize(unsigned(i_sq_v), mag_sq_v'length) + resize(unsigned(q_sq_v), mag_sq_v'length);
-            -- Re-enable checks.
             check_equal(mag_sq_o, mag_sq_v, "Magnitude squared mismatch. (Pipeline might be out of sync.)");
         end if;
     end process verify_synchronisation_process;
