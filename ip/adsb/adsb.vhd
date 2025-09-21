@@ -41,8 +41,6 @@ architecture rtl of adsb is
     signal detector_mag_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     signal detector_i : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal detector_q : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal detector_i_z1 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal detector_q_z1 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
 
     -- Schmitt trigger signals.
     signal trigger_envelope : std_logic := '0';
@@ -128,8 +126,8 @@ begin
             gate_i => trigger_envelope,
             start_i => detect,
             stop_i => '0', -- TODO This is unused.
-            i_i => detector_i_z1,
-            q_i => detector_q_z1,
+            i_i => detector_i,
+            q_i => detector_q,
             rdy_i => estimator_rdy,
             vld_o => estimator_vld,
             est_re_o => estimator_re,
@@ -147,15 +145,4 @@ begin
     est_im_o <= estimator_im;
     data_o <= demod_data;
     w56_o <= demod_w56;
-
-    main_process : process(clk)
-    begin
-        if rising_edge(clk) then
-            if d_vld_r = '1' then
-                detector_i_z1 <= detector_i;
-                detector_q_z1 <= detector_q;
-            end if;
-        end if;
-    end process main_process;
 end rtl;
-
