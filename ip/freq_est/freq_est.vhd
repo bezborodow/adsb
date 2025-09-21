@@ -88,6 +88,7 @@ begin
 
                 if (gate_i = '1') and (gate_z1 = '1') and (enable = '1') then
                     if to_integer(accumulation_count) < ACCUMULATION_LENGTH then
+                        -- TODO pipeline here. Add a register.
                         phasor_re := resize(i_i * i_z1 + q_i * q_z1, phasor_re'length);
                         phasor_im := resize(q_i * i_z1 - i_i * q_z1, phasor_im'length);
                         accumulator_re <= accumulator_re + resize(phasor_re, accumulator_re'length);

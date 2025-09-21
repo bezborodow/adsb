@@ -49,7 +49,7 @@ begin
                 -- Second delay. Multiplication. Keep pass-through IQ synchronised.
                 i_sq <= i_r * i_r;
                 q_sq <= q_r * q_r;
-                i_z2 <= i_r;
+                i_z2 <= i_r; -- TODO This looks like a bug.
                 q_z2 <= q_r;
 
                 -- Third delay. Addition.

@@ -162,6 +162,7 @@ begin
 
                         lhs_r(k) <= eai_v * ebo_v;
                         rhs_r(k) <= ebi_v * eao_v;
+                        -- TODO register between multiply and comparison.
                         if lhs_r(k) > rhs_r(k) then
                             agtb_r(k) <= '1';
                         else
