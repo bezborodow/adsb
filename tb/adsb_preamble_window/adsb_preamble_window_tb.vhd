@@ -38,9 +38,7 @@ begin
     
     uut : entity work.adsb_preamble_window
         generic map (
-            SAMPLES_PER_SYMBOL => 10,
-            IQ_WIDTH           => 12,
-            MAGNITUDE_WIDTH    => 25
+            SAMPLES_PER_SYMBOL => 10
         )
         port map (
             clk                  => clk,

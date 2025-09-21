@@ -6,7 +6,7 @@ use work.adsb_pkg.all;
 
 entity ppm_demod is
     generic (
-        SAMPLES_PER_SYMBOL : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL
+        SAMPLES_PER_SYMBOL : positive
     );
     port (
         clk : in std_logic;

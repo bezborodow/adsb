@@ -6,18 +6,16 @@ use work.adsb_pkg.all;
 
 entity adsb_uart is
     generic (
-        RX_IQ_WIDTH : integer := 16;
-        IQ_WIDTH : integer := ADSB_IQ_WIDTH;
-        SAMPLES_PER_SYMBOL : integer := ADSB_SAMPLES_PER_SYMBOL;
-        PREAMBLE_BUFFER_LENGTH : integer := ADSB_PREAMBLE_BUFFER_LENGTH;
+        SAMPLES_PER_SYMBOL : integer := 31;
+        PREAMBLE_BUFFER_LENGTH : integer := 492;
         ACCUMULATION_LENGTH : integer := 4096;
         UART_CLK_DIV : integer := 533
     );
     port (
         clk : in std_logic;
         d_vld_i : in std_logic; -- In-phase quadrature (IQ) data is valid.
-        i_i : in signed(RX_IQ_WIDTH-1 downto 0); -- In-phase sample.
-        q_i : in signed(RX_IQ_WIDTH-1 downto 0); -- Quadrature sample.
+        i_i : in signed(ADC_RX_IQ_WIDTH-1 downto 0); -- In-phase sample.
+        q_i : in signed(ADC_RX_IQ_WIDTH-1 downto 0); -- Quadrature sample.
         uart_tx_o : out std_logic; -- UART transmission port.
         led_o : out std_logic -- Activity indicator LED GPIO.
     );
@@ -29,8 +27,8 @@ architecture rtl of adsb_uart is
     constant ADSB_FIFO_DEPTH : integer := 4;
 
     -- Internal registers.
-    signal i_r : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal q_r : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal i_r : iq_t := (others => '0');
+    signal q_r : iq_t := (others => '0');
     signal d_vld_r : std_logic := '0';
     signal led_r : std_logic := '0';
 
@@ -82,7 +80,6 @@ begin
     u_adsb : entity work.adsb
         generic map (
             SAMPLES_PER_SYMBOL     => SAMPLES_PER_SYMBOL,
-            IQ_WIDTH               => IQ_WIDTH,
             PREAMBLE_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH,
             ACCUMULATION_LENGTH    => ACCUMULATION_LENGTH
         )
@@ -158,8 +155,8 @@ begin
             tx_o => uart_tx
         );
 
-    i_r <= i_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
-    q_r <= q_i(RX_IQ_WIDTH-1 downto RX_IQ_WIDTH-IQ_WIDTH);
+    i_r <= i_i(ADC_RX_IQ_WIDTH-1 downto ADC_RX_IQ_WIDTH-IQ_WIDTH);
+    q_r <= q_i(ADC_RX_IQ_WIDTH-1 downto ADC_RX_IQ_WIDTH-IQ_WIDTH);
     d_vld_r <= d_vld_i;
     uart_tx_o <= uart_tx;
     led_o <= led_r;

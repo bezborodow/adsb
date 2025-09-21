@@ -5,28 +5,18 @@ use ieee.math_real.all;
 use work.adsb_pkg.all;
 
 entity adsb_envelope is
-    generic (
-        IQ_WIDTH              : integer := ADSB_DEFAULT_IQ_WIDTH;
-        MAGNITUDE_WIDTH       : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1
-    );
     port (
         clk : in std_logic;
         ce_i : in std_logic; -- Clock enable.
         i_i : in signed(IQ_WIDTH-1 downto 0);
         q_i : in signed(IQ_WIDTH-1 downto 0);
-        mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        mag_sq_o : out unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
         i_o : out signed(IQ_WIDTH-1 downto 0);
         q_o : out signed(IQ_WIDTH-1 downto 0)
     );
 end adsb_envelope;
 
 architecture rtl of adsb_envelope is
-
-    constant SQUARED_WIDTH : positive := IQ_WIDTH * 2;
-
-    subtype iq_t is signed(IQ_WIDTH-1 downto 0);
-    subtype squared_t is signed(SQUARED_WIDTH-1 downto 0);
-    subtype mag_sq_t is unsigned(MAGNITUDE_WIDTH-1 downto 0);
 
     -- Clock enable.
     signal ce_c : std_logic := '0';

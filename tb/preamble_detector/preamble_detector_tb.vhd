@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 use std.textio.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
+use work.adsb_pkg.all;
 
 entity preamble_detector_tb is
 --  port ( );
@@ -11,17 +12,14 @@ entity preamble_detector_tb is
 end preamble_detector_tb;
 
 architecture test of preamble_detector_tb is
-    constant IQ_WIDTH : integer := 12;
-    constant MAGNITUDE_WIDTH : integer := IQ_WIDTH * 2 + 1;
-
     -- UUT signals.
     signal ce_i             : std_logic := '0';
     signal i_i              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal q_i              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal detect_o         : std_logic;
-    signal mag_sq_o         : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-    signal high_threshold_o : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-    signal low_threshold_o  : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+    signal mag_sq_o         : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
+    signal high_threshold_o : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
+    signal low_threshold_o  : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
     signal i_o              : signed(IQ_WIDTH-1 downto 0);
     signal q_o              : signed(IQ_WIDTH-1 downto 0);
 
@@ -35,6 +33,10 @@ begin
     clk <= not clk after clk_period / 2;
     
     uut : entity work.preamble_detector
+        generic map (
+            SAMPLES_PER_SYMBOL => 10,
+            BUFFER_LENGTH => 160
+        )
         port map (
             clk              => clk,
             ce_i             => '1',
@@ -89,7 +91,7 @@ begin
     verify_synchronisation_process : process(clk)
         variable i_sq_v : signed(IQ_WIDTH*2-1 downto 0);
         variable q_sq_v : signed(IQ_WIDTH*2-1 downto 0);
-        variable mag_sq_v : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        variable mag_sq_v : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
     begin
         if rising_edge(clk) then
             -- Ensure that IQ is synchronised with the envelope (magnitude squared.)

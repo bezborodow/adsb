@@ -25,16 +25,22 @@ architecture test of adsb_tb is
 begin
     clk <= not clk after clk_period / 2;
 
-    uut: entity work.adsb port map (
-        clk => clk,
-        d_vld_i => '1',
-        i_i => input_i,
-        q_i => input_q,
-        vld_o => adsb_vld,
-        rdy_i => adsb_rdy,
-        data_o => adsb_data,
-        w56_o => adsb_w56
-    );
+    uut : entity work.adsb
+        generic map (
+            SAMPLES_PER_SYMBOL     => 10,
+            PREAMBLE_BUFFER_LENGTH => 160,
+            ACCUMULATION_LENGTH    => 1024
+        )
+        port map (
+            clk => clk,
+            d_vld_i => '1',
+            i_i => input_i,
+            q_i => input_q,
+            vld_o => adsb_vld,
+            rdy_i => adsb_rdy,
+            data_o => adsb_data,
+            w56_o => adsb_w56
+        );
 
     main : process
         file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";

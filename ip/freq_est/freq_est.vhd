@@ -7,14 +7,13 @@ use work.adsb_pkg.all;
 -- Frequency Estimator
 entity freq_est is
     generic (
-        IQ_WIDTH : integer := ADSB_DEFAULT_IQ_WIDTH;
-        ACCUMULATION_LENGTH : integer := 1024
+        ACCUMULATION_LENGTH : positive
     );
     port (
         clk : in std_logic;
         ce_i : in std_logic;
-        i_i : in signed(IQ_WIDTH-1 downto 0);
-        q_i : in signed(IQ_WIDTH-1 downto 0);
+        i_i : in iq_t;
+        q_i : in iq_t;
         gate_i : in std_logic;
         start_i : in std_logic;
         stop_i : in std_logic;
@@ -26,22 +25,26 @@ entity freq_est is
 end freq_est;
 
 architecture rtl of freq_est is
-    constant ACCUMULATOR_WIDTH : integer := IQ_WIDTH*2 + 1 + integer(ceil(log2(real(ACCUMULATION_LENGTH))));
+    constant ACCUMULATOR_WIDTH : integer := IQ_WIDTH * 2 + 1 + integer(ceil(log2(real(ACCUMULATION_LENGTH))));
+
+    -- Phasor subtypes.
+    constant PHASOR_WIDTH : positive := IQ_WIDTH * 2 + 1;
+    subtype phasor_t is signed(PHASOR_WIDTH-1 downto 0);
 
     -- Input IQ data.
-    signal i_z0, i_z1 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal q_z0, q_z1 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal i_z0, i_z1 : iq_t := (others => '0');
+    signal q_z0, q_z1 : iq_t := (others => '0');
 
     -- Input gating from the Schmitt trigger.
     signal gate_z0, gate_z1 : std_logic := '0';
 
     -- Phasor calculation.
-    signal ph_re0, ph_re1, ph_re0_z1, ph_re1_z1 : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
-    signal ph_im0, ph_im1, ph_im0_z1, ph_im1_z1 : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
+    signal ph_re0, ph_re1, ph_re0_z1, ph_re1_z1 : phasor_t := (others => '0');
+    signal ph_im0, ph_im1, ph_im0_z1, ph_im1_z1 : phasor_t := (others => '0');
 
-    -- Phasor real and imaginary part.
-    signal phasor_re : signed(IQ_WIDTH*2 downto 0) := (others => '0');
-    signal phasor_im : signed(IQ_WIDTH*2 downto 0) := (others => '0');
+    -- Phasor real and imaginary parts.
+    signal phasor_re : phasor_t := (others => '0');
+    signal phasor_im : phasor_t := (others => '0');
 
     -- Phasor accumulator.
     signal accumulator_re : signed(ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');

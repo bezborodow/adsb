@@ -64,17 +64,21 @@ architecture test of ppm_demod_tb is
 begin
     clk <= not clk after clk_period / 2;
 
-    uut : entity work.ppm_demod port map (
-        clk => clk,
-        ce_i => '1',
-        rdy_i => ready,
-        envelope_i => input,
-        detect_i => detect,
-        vld_o => valid,
-        data_o => data,
-        w56_o => w56,
-        malformed_o => malformed
-    );
+    uut : entity work.ppm_demod
+        generic map (
+            SAMPLES_PER_SYMBOL => 10
+        )
+        port map (
+            clk => clk,
+            ce_i => '1',
+            rdy_i => ready,
+            envelope_i => input,
+            detect_i => detect,
+            vld_o => valid,
+            data_o => data,
+            w56_o => w56,
+            malformed_o => malformed
+        );
 
     main : process
     begin

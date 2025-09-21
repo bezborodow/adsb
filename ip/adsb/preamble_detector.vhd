@@ -6,66 +6,60 @@ use work.adsb_pkg.all;
 
 entity preamble_detector is
     generic (
-        SAMPLES_PER_SYMBOL    : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
-        IQ_WIDTH              : integer := ADSB_DEFAULT_IQ_WIDTH;
-        MAGNITUDE_WIDTH       : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1;
-        BUFFER_LENGTH         : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH
+        SAMPLES_PER_SYMBOL    : integer;
+        BUFFER_LENGTH         : integer
     );
     port (
         clk : in std_logic;
         ce_i : in std_logic; -- Clock enable.
-        i_i : in signed(IQ_WIDTH-1 downto 0);
-        q_i : in signed(IQ_WIDTH-1 downto 0);
+        i_i : in iq_t;
+        q_i : in iq_t;
 
-        i_o : out signed(IQ_WIDTH-1 downto 0);
-        q_o : out signed(IQ_WIDTH-1 downto 0);
-        mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        detect_o : out std_logic := '0';
-        high_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        low_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0)
+        i_o : out iq_t;
+        q_o : out iq_t;
+        mag_sq_o : out mag_sq_t;
+        detect_o : out std_logic;
+        high_threshold_o : out mag_sq_t;
+        low_threshold_o : out mag_sq_t
     );
 end preamble_detector;
 
 architecture rtl of preamble_detector is
     -- Accumulator width for for entire preamble buffer.
-    constant BUFFER_ACCUMULATOR_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
+    constant BUFFER_ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
 
     -- Envelope outputs (inputs to the windower.)
     signal env_i        : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal env_q        : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal env_mag_sq   : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal env_mag_sq   : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
 
     -- Windower outputs (inputs to the peak detector.)
     signal win_i              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal win_q              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal win_mag_sq         : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal win_mag_sq         : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
     signal win_inside_energy  : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
     signal win_outside_energy : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
-    signal win_max_mag_sq     : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal win_max_mag_sq     : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
     signal win_thres_ok       : std_logic;
 
     -- Peak outputs (final outputs from the cascade.)
     signal pk_i          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal pk_q          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal pk_mag_sq     : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal pk_max_mag_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal pk_mag_sq     : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
+    signal pk_max_mag_sq : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
     signal pk_detect     : std_logic := '0';
 
     -- Output registers.
     signal i_r              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal q_r              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal mag_sq_r         : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal mag_sq_r         : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
     signal detect_r         : std_logic := '0';
-    signal high_threshold_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal low_threshold_r  : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal high_threshold_r : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
+    signal low_threshold_r  : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
 
 begin
     -- Magnitude-squared envelope detector.
     u_envelope_detector : entity work.adsb_envelope
-        generic map (
-            IQ_WIDTH        => IQ_WIDTH,
-            MAGNITUDE_WIDTH => MAGNITUDE_WIDTH
-        )
         port map (
             clk      => clk,
             ce_i     => ce_i,
@@ -81,9 +75,7 @@ begin
     -- Used instead of a correlator; not the same thing, but similar purpose!
     u_windower : entity work.adsb_preamble_window
         generic map (
-            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL,
-            IQ_WIDTH           => IQ_WIDTH,
-            MAGNITUDE_WIDTH    => MAGNITUDE_WIDTH
+            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL
         )
         port map (
             clk                  => clk,
@@ -104,9 +96,7 @@ begin
     -- Peak detector.
     u_peak_detector : entity work.adsb_preamble_peak
         generic map (
-            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL,
-            IQ_WIDTH           => IQ_WIDTH,
-            MAGNITUDE_WIDTH    => MAGNITUDE_WIDTH
+            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL
         )
         port map (
             clk                  => clk,

@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 use std.textio.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
+use work.adsb_pkg.all;
 
 entity adsb_envelope_tb is
 --  port ( );
@@ -12,13 +13,11 @@ end adsb_envelope_tb;
 
 architecture test of adsb_envelope_tb is
 
-    constant IQ_WIDTH : integer := 12;
-    constant MAG_SQ_WIDTH : integer := IQ_WIDTH * 2 + 1;
     constant PIPELINE_DELAY : positive := 4;
 
     signal ce_i      : std_logic := '1';
     signal i_i, q_i  : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal mag_sq_o  : unsigned(MAG_SQ_WIDTH-1 downto 0);
+    signal mag_sq_o  : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
     signal i_o, q_o  : signed(IQ_WIDTH-1 downto 0);
 
     signal clk: std_logic := '1';
@@ -28,10 +27,6 @@ begin
     clk <= not clk after clk_period / 2;
 
     uut : entity work.adsb_envelope
-        generic map (
-            IQ_WIDTH        => IQ_WIDTH,
-            MAGNITUDE_WIDTH => MAG_SQ_WIDTH
-        )
         port map (
             clk      => clk,
             ce_i     => ce_i,

@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 use std.textio.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
+use work.adsb_pkg.all;
 
 entity adsb_uart_tb is
 --  port ( );
@@ -11,8 +12,8 @@ entity adsb_uart_tb is
 end adsb_uart_tb;
 
 architecture test of adsb_uart_tb is
-    signal input_i : signed(11 downto 0) := (others => '0');
-    signal input_q : signed(11 downto 0) := (others => '0');
+    signal input_i : signed(ADC_RX_IQ_WIDTH-1 downto 0) := (others => '0');
+    signal input_q : signed(ADC_RX_IQ_WIDTH-1 downto 0) := (others => '0');
 
     signal clk: std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
@@ -24,8 +25,6 @@ begin
 
     uut : entity work.adsb_uart
         generic map (
-            RX_IQ_WIDTH => 12,
-            IQ_WIDTH => 12,
             SAMPLES_PER_SYMBOL => 10,
             PREAMBLE_BUFFER_LENGTH => 160,
             ACCUMULATION_LENGTH => 1024,
@@ -50,8 +49,8 @@ begin
             read(line_buf, line_i);
             read(line_buf, line_q);
 
-            input_i <= to_signed(line_i, 12);
-            input_q <= to_signed(line_q, 12);
+            input_i <= to_signed(line_i, ADC_RX_IQ_WIDTH);
+            input_q <= to_signed(line_q, ADC_RX_IQ_WIDTH);
 
             wait for clk_period;
         end loop;
@@ -66,8 +65,8 @@ begin
             read(line_buf, line_i);
             read(line_buf, line_q);
 
-            input_i <= to_signed(line_i, 12);
-            input_q <= to_signed(line_q, 12);
+            input_i <= to_signed(line_i, ADC_RX_IQ_WIDTH);
+            input_q <= to_signed(line_q, ADC_RX_IQ_WIDTH);
 
             wait for clk_period;
         end loop;

@@ -6,16 +6,15 @@ use work.adsb_pkg.all;
 
 entity adsb is
     generic (
-        IQ_WIDTH               : integer := ADSB_DEFAULT_IQ_WIDTH;
-        SAMPLES_PER_SYMBOL     : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
-        PREAMBLE_BUFFER_LENGTH : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH;
-        ACCUMULATION_LENGTH    : integer := 1024
+        SAMPLES_PER_SYMBOL     : integer;
+        PREAMBLE_BUFFER_LENGTH : integer;
+        ACCUMULATION_LENGTH    : integer
     );
     port (
         clk : in std_logic;
         d_vld_i : in std_logic;
-        i_i : in signed(IQ_WIDTH-1 downto 0);
-        q_i : in signed(IQ_WIDTH-1 downto 0);
+        i_i : in iq_t;
+        q_i : in iq_t;
         vld_o : out std_logic;
         detect_o : out std_logic;
         rdy_i : in std_logic;
@@ -27,8 +26,6 @@ entity adsb is
 end adsb;
 
 architecture rtl of adsb is
-    constant MAGNITUDE_WIDTH : integer := IQ_WIDTH * 2 + 1;
-
     -- Internal signals and registers.
     signal rdy_r : std_logic := '0';
     signal vld_r : std_logic := '0';
@@ -36,11 +33,11 @@ architecture rtl of adsb is
 
     -- Preamble detector signals.
     signal detect : std_logic := '0';
-    signal high_threshold : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal low_threshold : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal detector_mag_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal detector_i : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal detector_q : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal high_threshold : mag_sq_t := (others => '0');
+    signal low_threshold : mag_sq_t := (others => '0');
+    signal detector_mag_sq : mag_sq_t := (others => '0');
+    signal detector_i : iq_t := (others => '0');
+    signal detector_q : iq_t := (others => '0');
 
     -- Schmitt trigger signals.
     signal trigger_envelope : std_logic := '0';
@@ -63,8 +60,6 @@ begin
     u_detector : entity work.preamble_detector
         generic map (
             SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL,
-            IQ_WIDTH           => IQ_WIDTH,
-            MAGNITUDE_WIDTH    => MAGNITUDE_WIDTH,
             BUFFER_LENGTH      => PREAMBLE_BUFFER_LENGTH
         )
         port map (
@@ -86,7 +81,7 @@ begin
     -- Hysteresis thresholds are adjusted based on the magnitude of the preamble.
     u_trigger : entity work.schmitt_trigger
         generic map (
-            SIGNAL_WIDTH => MAGNITUDE_WIDTH
+            SIGNAL_WIDTH => IQ_MAG_SQ_WIDTH
         )
         port map (
             clk => clk,
@@ -117,7 +112,6 @@ begin
     -- Frequency estimator.
     u_freq_est : entity work.freq_est
         generic map (
-            IQ_WIDTH => IQ_WIDTH,
             ACCUMULATION_LENGTH => ACCUMULATION_LENGTH
         )
         port map (

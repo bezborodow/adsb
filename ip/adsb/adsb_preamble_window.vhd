@@ -6,23 +6,21 @@ use work.adsb_pkg.all;
 
 entity adsb_preamble_window is
     generic (
-        SAMPLES_PER_SYMBOL     : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
-        IQ_WIDTH               : integer := ADSB_DEFAULT_IQ_WIDTH;
-        MAGNITUDE_WIDTH        : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1
+        SAMPLES_PER_SYMBOL : positive
     );
     port (
         clk : in std_logic;
         ce_i : in std_logic; -- Clock enable.
         i_i : in signed(IQ_WIDTH-1 downto 0);
         q_i : in signed(IQ_WIDTH-1 downto 0);
-        mag_sq_i : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        mag_sq_i : in unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
 
         i_o : out signed(IQ_WIDTH-1 downto 0);
         q_o : out signed(IQ_WIDTH-1 downto 0);
-        mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        max_mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_inside_energy_o : out unsigned(MAGNITUDE_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0); -- TODO Move constant to package?
-        win_outside_energy_o : out unsigned(MAGNITUDE_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0);
+        mag_sq_o : out unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
+        max_mag_sq_o : out unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
+        win_inside_energy_o : out unsigned(IQ_MAG_SQ_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0); -- TODO Move constant to package?
+        win_outside_energy_o : out unsigned(IQ_MAG_SQ_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0);
         all_thresholds_ok_o : out std_logic
     );
 end adsb_preamble_window;
@@ -32,10 +30,10 @@ architecture rtl of adsb_preamble_window is
     constant BUFFER_LENGTH : positive := 16 * SAMPLES_PER_SYMBOL;
 
     -- Accumulator width for for entire preamble buffer.
-    constant BUFFER_ACCUMULATOR_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
+    constant BUFFER_ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
 
     -- Accumulator width for a single symbol.
-    constant SYMBOL_ACCUMULATOR_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(SAMPLES_PER_SYMBOL))));
+    constant SYMBOL_ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(SAMPLES_PER_SYMBOL))));
 
     -- Number of symbols in the preamble.
     constant NUM_SYMBOLS_IN_PREAMBLE : positive := 16;
@@ -52,8 +50,6 @@ architecture rtl of adsb_preamble_window is
     -- preamble and is used for preamble detection.
     -- The IQ buffer is for timing and is as long as the number of delay clock
     -- cycles of this component.
-    subtype mag_sq_t is unsigned(MAGNITUDE_WIDTH-1 downto 0);
-    type mag_sq_buffer_t is array (natural range <>) of mag_sq_t;
     subtype mag_sq_buffer_index_t is natural range 0 to BUFFER_LENGTH-1;
     signal mag_sq_buf_shift_reg : mag_sq_buffer_t(0 to BUFFER_LENGTH-1) := (others => (others => '0'));
 
@@ -76,8 +72,6 @@ architecture rtl of adsb_preamble_window is
     signal symbol_max_a : symbol_maximum_array_t(0 to 3) := (others => (others => '0'));
 
     -- Delay pipeline for IQ.
-    subtype iq_t is signed(IQ_WIDTH-1 downto 0);
-    type iq_buffer_t is array (natural range <>) of iq_t;
     signal i_buf_reg, q_buf_reg : iq_buffer_t(0 to PIPELINE_DELAY-1) := (others => (others => '0'));
 
     -- Stage 4 registered signals.
@@ -100,7 +94,7 @@ architecture rtl of adsb_preamble_window is
     signal win_outside_energy_r : buffer_energy_t := (others => '0');
     signal max_mag_sq_r : mag_sq_t := (others => '0');
     signal i_r, q_r : iq_t := (others => '0');
-    signal mag_sq_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal mag_sq_r : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
     signal all_thresholds_ok_r : std_logic := '0';
 
     -- Finds the max of four samples from the symbol.

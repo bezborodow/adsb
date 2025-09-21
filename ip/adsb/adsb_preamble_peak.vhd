@@ -6,25 +6,23 @@ use work.adsb_pkg.all;
 
 entity adsb_preamble_peak is
     generic (
-        IQ_WIDTH        : integer := ADSB_DEFAULT_IQ_WIDTH;
-        MAGNITUDE_WIDTH : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1;
-        SAMPLES_PER_SYMBOL : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL
+        SAMPLES_PER_SYMBOL : positive
     );
     port (
         clk : in std_logic;
         ce_i : in std_logic; -- Clock enable.
         i_i : in signed(IQ_WIDTH-1 downto 0);
         q_i : in signed(IQ_WIDTH-1 downto 0);
-        mag_sq_i : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        max_mag_sq_i : in unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        win_inside_energy_i : in unsigned(MAGNITUDE_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0); -- TODO Move constant to package?
-        win_outside_energy_i : in unsigned(MAGNITUDE_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0);
+        mag_sq_i : in mag_sq_t;
+        max_mag_sq_i : in mag_sq_t;
+        win_inside_energy_i : in unsigned(IQ_MAG_SQ_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0); -- TODO Move constant to package?
+        win_outside_energy_i : in unsigned(IQ_MAG_SQ_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0);
         all_thresholds_ok_i : in std_logic;
 
         i_o : out signed(IQ_WIDTH-1 downto 0);
         q_o : out signed(IQ_WIDTH-1 downto 0);
-        mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        max_mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        mag_sq_o : out mag_sq_t;
+        max_mag_sq_o : out mag_sq_t;
         detect_o : out std_logic
     );
 end adsb_preamble_peak;
@@ -38,8 +36,8 @@ architecture rtl of adsb_preamble_peak is
     type windowed_sample_record_t is record
         i             : signed(IQ_WIDTH-1 downto 0);
         q             : signed(IQ_WIDTH-1 downto 0);
-        mag_sq        : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        max_mag_sq    : unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        mag_sq        : mag_sq_t;
+        max_mag_sq    : mag_sq_t;
         win_ei        : unsigned(win_inside_energy_i'length-1 downto 0);
         win_eo        : unsigned(win_outside_energy_i'length-1 downto 0);
         thresholds_ok : std_logic;
@@ -77,8 +75,8 @@ architecture rtl of adsb_preamble_peak is
     -- Registered signals for outputs.
     signal i_r, i_z3 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal q_r, q_z3 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal mag_sq_r, mag_sq_z3 : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal max_mag_sq_r, max_mag_sq_z3 : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal mag_sq_r, mag_sq_z3 : mag_sq_t := (others => '0');
+    signal max_mag_sq_r, max_mag_sq_z3 : mag_sq_t := (others => '0');
     signal detect_r : std_logic := '0';
 
     -- Check that all bits in a standard logic vector are '1'.

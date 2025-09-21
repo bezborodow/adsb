@@ -4,6 +4,7 @@ use ieee.numeric_std.all;
 use std.textio.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
+use work.adsb_pkg.all;
 
 
 entity freq_est_tb is
@@ -11,8 +12,6 @@ entity freq_est_tb is
     generic (runner_cfg : string);
 end freq_est_tb;
 architecture test of freq_est_tb is
-    constant IQ_WIDTH : integer := 12;
-
     signal clk : std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
 
@@ -29,19 +28,23 @@ architecture test of freq_est_tb is
 begin
     clk <= not clk after clk_period / 2;
 
-    uut : entity work.freq_est port map (
-        clk => clk,
-        ce_i => '1',
-        start_i => start,
-        stop_i => stop,
-        i_i => i,
-        q_i => q,
-        gate_i => gate,
-        vld_o => vld,
-        rdy_i => rdy,
-        est_re_o => est_re,
-        est_im_o => est_im
-    );
+    uut : entity work.freq_est
+        generic map (
+            ACCUMULATION_LENGTH => 1024
+        )
+        port map (
+            clk => clk,
+            ce_i => '1',
+            start_i => start,
+            stop_i => stop,
+            i_i => i,
+            q_i => q,
+            gate_i => gate,
+            vld_o => vld,
+            rdy_i => rdy,
+            est_re_o => est_re,
+            est_im_o => est_im
+        );
 
     main : process
         file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
