@@ -74,7 +74,6 @@ architecture rtl of adsb_preamble_window is
     -- Maximum magnitude squared.
     type symbol_maximum_array_t is array (natural range <>) of mag_sq_t;
     signal symbol_max_a : symbol_maximum_array_t(0 to 3) := (others => (others => '0'));
-    signal symbol_max_a_z1 : symbol_maximum_array_t(0 to 3) := (others => (others => '0'));
 
     -- Delay pipeline for IQ.
     subtype iq_t is signed(IQ_WIDTH-1 downto 0);
@@ -82,6 +81,8 @@ architecture rtl of adsb_preamble_window is
     signal i_buf_reg, q_buf_reg : iq_buffer_t(0 to PIPELINE_DELAY-1) := (others => (others => '0'));
 
     -- Stage 4 registered signals.
+    signal stage4_max0_r               : mag_sq_t := (others => '0');
+    signal stage4_max1_r               : mag_sq_t := (others => '0');
     signal stage4_max_mag_sq_r         : mag_sq_t := (others => '0');
     signal stage4_win_inside_energy_r  : buffer_energy_t := (others => '0');
     signal stage4_win_outside_energy_r : buffer_energy_t := (others => '0');
@@ -101,6 +102,50 @@ architecture rtl of adsb_preamble_window is
     signal i_r, q_r : iq_t := (others => '0');
     signal mag_sq_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     signal all_thresholds_ok_r : std_logic := '0';
+
+    -- Finds the max of four samples from the symbol.
+    -- This does not check every symbol, otherwise timing would fail,
+    -- and a more elaborate algorithmn would be required.
+    function find_max_in_symbol(symbol_v : mag_sq_buffer_t) return mag_sq_t is
+        -- Need to compare in a tree. Compare first two pairs,
+        -- then second pair. Choose four samples, evenly spaced in the symbol.
+        constant SAMPLE_INDICES : adsb_int_array_t := (
+            SAMPLES_PER_SYMBOL / 8,
+            SAMPLES_PER_SYMBOL / 8 + SAMPLES_PER_SYMBOL / 4,
+            SAMPLES_PER_SYMBOL / 8 + 2 * SAMPLES_PER_SYMBOL / 4,
+            SAMPLES_PER_SYMBOL / 8 + 3 * SAMPLES_PER_SYMBOL / 4
+        );
+
+        -- First stage comparison.
+        variable max0_0_v, max0_1_v, max1_0_v, max1_1_v : mag_sq_t := (others => '0');
+
+        -- Second stage comparison.
+        variable max0_v, max1_v : mag_sq_t := (others => '0');
+    begin
+        max0_0_v := symbol_v(SAMPLE_INDICES(0));
+        max0_1_v := symbol_v(SAMPLE_INDICES(1));
+        max1_0_v := symbol_v(SAMPLE_INDICES(2));
+        max1_1_v := symbol_v(SAMPLE_INDICES(3));
+
+        -- First stage.
+        if max0_0_v > max0_1_v then
+            max0_v := max0_0_v;
+        else
+            max0_v := max0_1_v;
+        end if;
+        if max1_0_v > max1_1_v then
+            max1_v := max1_0_v;
+        else
+            max1_v := max1_1_v;
+        end if;
+
+        -- Second stage.
+        if max0_v > max1_v then
+            return max0_v;
+        end if;
+
+        return max1_v;
+    end function;
 
 begin
     -- Combinatorial signals.
@@ -156,7 +201,6 @@ begin
         variable sym_accumulators : symbol_energy_array_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => '0'));
         variable sample_v : mag_sq_t := (others => '0');
         variable accum_v : symbol_energy_t := (others => '0');
-        variable max_mag_sq_v : mag_sq_t := (others => '0');
         variable k : integer range 0 to 3 := 0;
     begin
         if rising_edge(clk) then
@@ -179,22 +223,12 @@ begin
                     symbol_energy_a(i) <= sym_accumulators(i);
 
                     -- Find maximum value of envelope.
-                    -- TODO use PREAMBLE_POSITION or something like that?
+                    -- Find max within each of the four high symbols first.
+                    -- Later, this will be narrowed down further in another clock cycle.
                     if i = 0 or i = 2 or i = 7 or i = 9 then
-                        max_mag_sq_v := (others => '0');
-                        for j in 0 to SAMPLES_PER_SYMBOL-1 loop
 
-                            -- This can fail timing, so do not check every sample.
-                            -- Use modulo to only check every fourth sample.
-                            if j mod 4 = 2 then
-                                sample_v := symbol_reg(i)(j);
-                                if sample_v > max_mag_sq_v then
-                                    max_mag_sq_v := sample_v;
-                                end if;
-                            end if;
-                        end loop;
-
-                        symbol_max_a(k) <= max_mag_sq_v;
+                        -- This can fail timing, so do not check every sample.
+                        symbol_max_a(k) <= find_max_in_symbol(symbol_reg(i));
 
                         if k < 3 then
                             k := k + 1;
@@ -230,21 +264,29 @@ begin
                     end if;
                 end loop;
 
-                -- For each inside symbol window.
-                max_mag_sq_v := (others => '0');
-                for i in 0 to 3 loop
+                -- Find maximum each of the four symbols.
+                -- This takes two cycles.
+                -- First two pairs to find maximum.
+                if symbol_max_a(0) > symbol_max_a(1) then
+                    stage4_max0_r <= symbol_max_a(0);
+                else
+                    stage4_max0_r <= symbol_max_a(1);
+                end if;
 
-                    -- Register z1 before passing to DSP.
-                    symbol_max_a_z1(i) <= symbol_max_a(i);
+                if symbol_max_a(2) > symbol_max_a(3) then
+                    stage4_max1_r <= symbol_max_a(2);
+                else
+                    stage4_max1_r <= symbol_max_a(3);
+                end if;
 
-                    -- Find maximum magnitude.
-                    if symbol_max_a_z1(i) > max_mag_sq_v then
-                        max_mag_sq_v := symbol_max_a_z1(i);
-                    end if;
-                end loop;
+                -- Last pair to find maximum.
+                if stage4_max0_r > stage4_max1_r then
+                    max_mag_sq_v := stage4_max0_r;
+                else
+                    max_mag_sq_v := stage4_max1_r;
+                end if;
 
-                -- Pass pipeline to next stage.
-                -- Truncate energy least significant bits to fit inside a mag_sq_t.
+                -- Pass to next stage.
                 stage4_max_mag_sq_r <= max_mag_sq_v;
                 stage4_win_inside_energy_r <= sum_inside_v;
                 stage4_win_outside_energy_r <= sum_outside_v;
