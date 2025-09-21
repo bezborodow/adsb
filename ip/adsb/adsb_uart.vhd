@@ -10,9 +10,6 @@ entity adsb_uart is
         IQ_WIDTH : integer := ADSB_IQ_WIDTH;
         SAMPLES_PER_SYMBOL : integer := ADSB_SAMPLES_PER_SYMBOL;
         PREAMBLE_BUFFER_LENGTH : integer := ADSB_PREAMBLE_BUFFER_LENGTH;
-        PREAMBLE_POSITION1 : integer := 61;
-        PREAMBLE_POSITION2 : integer := 215;
-        PREAMBLE_POSITION3 : integer := 276;
         ACCUMULATION_LENGTH : integer := 4096;
         UART_CLK_DIV : integer := 533
     );
@@ -86,9 +83,6 @@ begin
             SAMPLES_PER_SYMBOL     => SAMPLES_PER_SYMBOL,
             IQ_WIDTH               => IQ_WIDTH,
             PREAMBLE_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH,
-            PREAMBLE_POSITION1     => PREAMBLE_POSITION1,
-            PREAMBLE_POSITION2     => PREAMBLE_POSITION2,
-            PREAMBLE_POSITION3     => PREAMBLE_POSITION3,
             ACCUMULATION_LENGTH    => ACCUMULATION_LENGTH
         )
         port map (

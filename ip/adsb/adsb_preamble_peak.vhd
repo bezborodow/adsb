@@ -70,8 +70,8 @@ architecture rtl of adsb_preamble_peak is
     signal agtb_r : std_logic_vector(0 to K_MAX) := (others => '0');
 
     -- Delay of threshold signal to keep things in sync.
-    signal thres_ok_z0 : std_logic := '0';
     signal thres_ok_z1 : std_logic := '0';
+    signal thres_ok_z2 : std_logic := '0';
 
     -- Registered signals for outputs.
     signal i_r          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
@@ -124,8 +124,8 @@ begin
                 local_maximum_v := '1'; -- Default to '1', then turn off upon failure to meet conditions.
                 k := 0;
 
-                thres_ok_z0 <= centre_v.thresholds_ok;
-                thres_ok_z1 <= thres_ok_z0;
+                thres_ok_z1 <= centre_v.thresholds_ok;
+                thres_ok_z2 <= thres_ok_z1;
                 for i in history_a'range loop
 
                     -- Skip centre record.
@@ -162,7 +162,11 @@ begin
                     end if;
                 end loop;
                 
-                if (and agtb_r = '1') and thres_ok_z1 = '1' then
+                -- Register the detect strobe if all conditions are met.
+                -- If the record is greater than its neighbours and thresholds are okay.
+                -- There is two cycles of delay (z2) prior to this operation that
+                -- needs to be accounted for.
+                if (and agtb_r = '1') and thres_ok_z2 = '1' then
                     detect_r <= '1';
                 else
                     detect_r <= '0';
@@ -173,7 +177,6 @@ begin
 
     -- Pass-through signals delayed against the pipeline delay.
     delay_process : process(clk)
-        -- TODO This will likely need to be adjusted.
         constant DELAY_OFFSET : integer := 2;
     begin
         if rising_edge(clk) then

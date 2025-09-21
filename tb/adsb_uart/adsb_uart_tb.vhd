@@ -28,9 +28,6 @@ begin
             IQ_WIDTH => 12,
             SAMPLES_PER_SYMBOL => 10,
             PREAMBLE_BUFFER_LENGTH => 160,
-            PREAMBLE_POSITION1 => 20,
-            PREAMBLE_POSITION2 => 70,
-            PREAMBLE_POSITION3 => 90,
             ACCUMULATION_LENGTH => 1024,
             UART_CLK_DIV => 4 -- Don't choose a realistic baud rate, because the testbench will take forever.
         )

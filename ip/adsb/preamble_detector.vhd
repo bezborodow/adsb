@@ -9,10 +9,7 @@ entity preamble_detector is
         SAMPLES_PER_SYMBOL    : integer := ADSB_DEFAULT_SAMPLES_PER_SYMBOL;
         IQ_WIDTH              : integer := ADSB_DEFAULT_IQ_WIDTH;
         MAGNITUDE_WIDTH       : integer := ADSB_DEFAULT_IQ_WIDTH * 2 + 1;
-        BUFFER_LENGTH         : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH; -- TODO Not needed.
-        PREAMBLE_POSITION1     : integer := 20; -- TODO Not needed.
-        PREAMBLE_POSITION2     : integer := 70;
-        PREAMBLE_POSITION3     : integer := 90
+        BUFFER_LENGTH         : integer := ADSB_DEFAULT_PREAMBLE_BUFFER_LENGTH
     );
     port (
         clk : in std_logic;
@@ -20,12 +17,12 @@ entity preamble_detector is
         i_i : in signed(IQ_WIDTH-1 downto 0);
         q_i : in signed(IQ_WIDTH-1 downto 0);
 
-        detect_o : out std_logic := '0';
-        mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        high_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
-        low_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
         i_o : out signed(IQ_WIDTH-1 downto 0);
-        q_o : out signed(IQ_WIDTH-1 downto 0)
+        q_o : out signed(IQ_WIDTH-1 downto 0);
+        mag_sq_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        detect_o : out std_logic := '0';
+        high_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0);
+        low_threshold_o : out unsigned(MAGNITUDE_WIDTH-1 downto 0)
     );
 end preamble_detector;
 
@@ -54,9 +51,13 @@ architecture rtl of preamble_detector is
     signal pk_max_mag_sq : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
     signal pk_detect     : std_logic := '0';
 
-    -- TODO Schmitt trigger thresholds.
+    -- Output registers.
+    signal i_r              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal q_r              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal mag_sq_r         : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal detect_r         : std_logic := '0';
     signal high_threshold_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal low_threshold_r : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+    signal low_threshold_r  : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
 
 begin
     -- Magnitude-squared envelope detector.
@@ -124,4 +125,36 @@ begin
             max_mag_sq_o         => pk_max_mag_sq,
             detect_o             => pk_detect
         );
+
+        -- Drive outputs with registers.
+        i_o              <= i_r;
+        q_o              <= q_r;
+        mag_sq_o         <= mag_sq_r;
+        detect_o         <= detect_r;
+        high_threshold_o <= high_threshold_r;
+        low_threshold_o  <= low_threshold_r;
+
+        -- Set up high and low hysteresis thresholds for the Schmitt trigger.
+        schmitt_trigger_process : process(clk)
+        begin
+            if rising_edge(clk) then
+                if ce_i = '1' then
+
+                    -- Pass through signals to the next stage, which is the Schmitt trigger.
+                    i_r      <= pk_i;
+                    q_r      <= pk_q;
+                    mag_sq_r <= pk_mag_sq;
+                    detect_r <= pk_detect;
+
+                    -- Latch the hysteresis thresholds when a preamble is detected.
+                    if pk_detect = '1' then
+                        -- High hysteresis threshold is half of the maximum of the envelope.
+                        high_threshold_r <= pk_max_mag_sq srl 1;
+
+                        -- Low hysteresis threshold is one eighth of the maximum of the envelope.
+                        low_threshold_r <= pk_max_mag_sq srl 3;
+                    end if;
+                end if;
+            end if;
+        end process schmitt_trigger_process;
 end rtl;
