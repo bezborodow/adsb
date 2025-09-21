@@ -57,6 +57,22 @@ architecture rtl of adsb_preamble_peak is
         )
     );
 
+    -- Peak detection signals.
+    -- Array of products used in cross-multiplication and comparison.
+    constant K_MAX : natural := RECORD_ARRAY_LENGTH - 2;
+    subtype energy_product_t is unsigned(win_inside_energy_i'length*2-1 downto 0);
+    type energy_product_array_t is array (0 to K_MAX) of energy_product_t;
+    signal lhs_r : energy_product_array_t := (others => (others => '0'));
+    signal rhs_r : energy_product_array_t := (others => (others => '0'));
+
+    -- Is A greater than B?
+    -- Centre record greater than its neighbours for each neighbour?
+    signal agtb_r : std_logic_vector(0 to K_MAX) := (others => '0');
+
+    -- Delay of threshold signal to keep things in sync.
+    signal thres_ok_z0 : std_logic := '0';
+    signal thres_ok_z1 : std_logic := '0';
+
     -- Registered signals for outputs.
     signal i_r          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
     signal q_r          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
@@ -95,25 +111,59 @@ begin
     peak_detector_process : process(clk)
         variable centre_v : windowed_sample_record_t;
         variable local_maximum_v : std_logic := '0';
+        variable eai_v, ebi_v : unsigned(win_inside_energy_i'length-1 downto 0) := (others => '0');
+        variable eao_v, ebo_v : unsigned(win_outside_energy_i'length-1 downto 0) := (others => '0');
+        variable k : integer range 0 to 3 := 0;
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
 
                 centre_v := history_a(CENTRE_RECORD);
-                if centre_v.thresholds_ok = '1' then
 
-                    -- Compare centre record against neighbours to find a local peak.
-                    local_maximum_v := '1'; -- Default to '1', then turn off upon failure to meet conditions.
-                    for i in history_a'range loop
+                -- Compare centre record against neighbours to find a local peak.
+                local_maximum_v := '1'; -- Default to '1', then turn off upon failure to meet conditions.
+                k := 0;
 
-                        -- Skip current record and records that do not satisfy thresholds.
-                        if i /= CENTRE_RECORD and history_a(i).thresholds_ok = '1' then
+                thres_ok_z0 <= centre_v.thresholds_ok;
+                thres_ok_z1 <= thres_ok_z0;
+                for i in history_a'range loop
 
-                            -- TODO If the energy ratio is greater than the centre record, then conditions are not met.
+                    -- Skip centre record.
+                    if i /= CENTRE_RECORD then
+                        -- If the energy ratio of the centre record is greater than its
+                        -- neighbours, then it is a local maxima (peak), but also need
+                        -- to check that all thresholds of the four high symbol energies
+                        -- are okay.
+                        --
+                        -- The formula is:
+                        --     E_ai / E_ao > E_bi / E_bo;
+                        --
+                        -- Using cross-multiplication: 
+                        --
+                        --     E_ai * E_bo > E_bi * E_ao
+                        --
+                        -- This needs to be registered for the DSP in stages.
+                        eai_v := centre_v.win_ei;
+                        eao_v := centre_v.win_eo;
+                        ebi_v := history_a(i).win_ei;
+                        ebo_v := history_a(i).win_eo;
+
+                        lhs_r(k) <= eai_v * ebo_v;
+                        rhs_r(k) <= ebi_v * eao_v;
+                        if lhs_r(k) > rhs_r(k) then
+                            agtb_r(k) <= '1';
+                        else
+                            agtb_r(k) <= '0';
                         end if;
-                    end loop;
 
-                    detect_r <= local_maximum_v;
+                        if k < K_MAX then
+                            k := k + 1;
+                        end if;
+                    end if;
+                end loop;
+                
+                if (and agtb_r = '1') and thres_ok_z1 = '1' then
+                    detect_r <= '1';
                 else
                     detect_r <= '0';
                 end if;
@@ -122,15 +172,16 @@ begin
     end process peak_detector_process;
 
     -- Pass-through signals delayed against the pipeline delay.
-    -- TODO This will likely need to be adjusted.
     delay_process : process(clk)
+        -- TODO This will likely need to be adjusted.
+        constant DELAY_OFFSET : integer := 2;
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
-                i_r          <= history_a(CENTRE_RECORD).i;
-                q_r          <= history_a(CENTRE_RECORD).q;
-                mag_sq_r     <= history_a(CENTRE_RECORD).mag_sq;
-                max_mag_sq_r <= history_a(CENTRE_RECORD).max_mag_sq;
+                i_r          <= history_a(CENTRE_RECORD + DELAY_OFFSET).i;
+                q_r          <= history_a(CENTRE_RECORD + DELAY_OFFSET).q;
+                mag_sq_r     <= history_a(CENTRE_RECORD + DELAY_OFFSET).mag_sq;
+                max_mag_sq_r <= history_a(CENTRE_RECORD + DELAY_OFFSET).max_mag_sq;
             end if;
         end if;
     end process delay_process;
