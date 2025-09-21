@@ -125,7 +125,7 @@ begin
             ce_i => d_vld_r,
             gate_i => trigger_envelope,
             start_i => detect,
-            stop_i => '0', -- TODO This is unused.
+            stop_i => demod_vld,
             i_i => detector_i,
             q_i => detector_q,
             rdy_i => estimator_rdy,

@@ -54,7 +54,7 @@ begin
             wait for clk_period;
         end loop;
 
-        assert adsb_vld = '1' report "Not ready. Should be ready.";
+        assert adsb_vld = '1' report "Not valid. Should be valid.";
         adsb_rdy <= '1';
         wait for clk_period;
 
