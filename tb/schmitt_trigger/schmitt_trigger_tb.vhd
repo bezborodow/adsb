@@ -21,7 +21,7 @@ architecture test of schmitt_trigger_tb is
 begin
     clk <= not clk after clk_period / 2;
 
-    uut: entity work.schmitt_trigger port map (
+    uut : entity work.schmitt_trigger port map (
         schmitt_i => magnitude_sq,
         schmitt_o => output,
         high_threshold_i => to_unsigned(500000, 25),
@@ -39,19 +39,16 @@ begin
     begin
         test_runner_setup(runner, runner_cfg);
         while not endfile(iq_file) loop
-          readline(iq_file, line_buf);
-          read(line_buf, line_i);
-          read(line_buf, line_q);
+            readline(iq_file, line_buf);
+            read(line_buf, line_i);
+            read(line_buf, line_q);
 
-          input_i := to_signed(line_i, 12);
-          input_q := to_signed(line_q, 12);
-          magnitude_sq <= to_unsigned(
-                  to_integer(input_i) * to_integer(input_i)
-                + to_integer(input_q) * to_integer(input_q),
-                magnitude_sq'length);
+            input_i := to_signed(line_i, 12);
+            input_q := to_signed(line_q, 12);
+            magnitude_sq <= to_unsigned(to_integer(input_i) * to_integer(input_i) + to_integer(input_q) * to_integer(input_q), magnitude_sq'length);
 
-
-          wait for clk_period;
+            -- TODO Implement test.
+            wait for clk_period;
         end loop;
 
         test_runner_cleanup(runner); -- Simulation ends here
