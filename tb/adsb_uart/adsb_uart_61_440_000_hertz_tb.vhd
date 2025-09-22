@@ -6,17 +6,17 @@ library vunit_lib;
 context vunit_lib.vunit_context;
 use work.adsb_pkg.all;
 
-entity adsb_uart_tb is
+entity adsb_uart_61_440_000_hertz_tb is
 --  port ( );
     generic (runner_cfg : string);
-end adsb_uart_tb;
+end adsb_uart_61_440_000_hertz_tb;
 
-architecture test of adsb_uart_tb is
+architecture test of adsb_uart_61_440_000_hertz_tb is
     signal input_i : signed(ADC_RX_IQ_WIDTH-1 downto 0) := (others => '0');
     signal input_q : signed(ADC_RX_IQ_WIDTH-1 downto 0) := (others => '0');
 
     signal clk: std_logic := '1';
-    constant clk_period : time := 50 ns; -- 20 MHz sample rate.
+    constant clk_period : time := 16.276 ns; -- 61.44 MHz sample rate.
 
     signal adsb_uart_tx: std_logic := '0';
 
@@ -24,12 +24,6 @@ begin
     clk <= not clk after clk_period / 2;
 
     uut : entity work.adsb_uart
-        generic map (
-            SAMPLES_PER_SYMBOL     => 10,
-            PREAMBLE_BUFFER_LENGTH => 160,
-            ACCUMULATION_LENGTH    => 1024,
-            UART_CLK_DIV           => 4 -- Don't choose a realistic baud rate, because the testbench will take forever.
-        )
         port map (
             clk => clk,
             d_vld_i => '1',
@@ -39,7 +33,7 @@ begin
         );
 
     main : process
-        file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
+        file iq_file : text open read_mode is "tb/data/gen/adsb_61_44.dat";
         variable line_buf : line;
         variable line_i, line_q : integer;
     begin
@@ -54,24 +48,6 @@ begin
 
             wait for clk_period;
         end loop;
-
-        -- Close and reopen the file.
-        file_close(iq_file);
-        file_open(iq_file, "tb/schmitt_trigger/iq_data.txt", read_mode);
-
-        -- Second pass to check that consecutive messages can be received.
-        while not endfile(iq_file) loop
-            readline(iq_file, line_buf);
-            read(line_buf, line_i);
-            read(line_buf, line_q);
-
-            input_i <= to_signed(line_i, ADC_RX_IQ_WIDTH);
-            input_q <= to_signed(line_q, ADC_RX_IQ_WIDTH);
-
-            wait for clk_period;
-        end loop;
-
-        wait for clk_period * 10000;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;

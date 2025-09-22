@@ -123,18 +123,18 @@ connect_bd_net [get_bd_pins xlslice_0/Din] [get_bd_pins fir_compiler_0/m_axis_da
 connect_bd_net [get_bd_pins xlslice_1/Din] [get_bd_pins fir_compiler_0/m_axis_data_tdata]
 
 # RTL: ADS-B processing component.
-create_bd_cell -type module -reference adsb_uart i_adsb_uart
-connect_bd_net [get_bd_pins util_ad9361_adc_fifo/dout_clk] [get_bd_pins i_adsb_uart/clk]
-connect_bd_net [get_bd_pins fir_compiler_0/m_axis_data_tvalid] [get_bd_pins i_adsb_uart/d_vld_i]
-connect_bd_net [get_bd_pins xlslice_0/Dout] [get_bd_pins i_adsb_uart/i_i]
-connect_bd_net [get_bd_pins xlslice_1/Dout] [get_bd_pins i_adsb_uart/q_i]
+create_bd_cell -type module -reference adsb_uart u_adsb_uart
+connect_bd_net [get_bd_pins util_ad9361_adc_fifo/dout_clk] [get_bd_pins u_adsb_uart/clk]
+connect_bd_net [get_bd_pins fir_compiler_0/m_axis_data_tvalid] [get_bd_pins u_adsb_uart/d_vld_i]
+connect_bd_net [get_bd_pins xlslice_0/Dout] [get_bd_pins u_adsb_uart/i_i]
+connect_bd_net [get_bd_pins xlslice_1/Dout] [get_bd_pins u_adsb_uart/q_i]
 
 # Enable UART0.
 set_property -dict [list \
   CONFIG.PCW_QSPI_GRP_SINGLE_SS_ENABLE {1} \
   CONFIG.PCW_UART0_PERIPHERAL_ENABLE {1} \
 ] [get_bd_cells sys_ps7]
-connect_bd_net [get_bd_pins i_adsb_uart/uart_tx_o] [get_bd_pins sys_ps7/UART0_RX]
+connect_bd_net [get_bd_pins u_adsb_uart/uart_tx_o] [get_bd_pins sys_ps7/UART0_RX]
 
 update_compile_order -fileset sources_1
 validate_bd_design

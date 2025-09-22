@@ -22,6 +22,7 @@ tb_names = [
     "adsb_tb",
     "adsb_fifo_tb",
     "adsb_uart_tb",
+    "adsb_uart_61_440_000_hertz_tb",
     "adsb_envelope_tb",
     "adsb_preamble_window_tb",
     "uart_tx_tb",

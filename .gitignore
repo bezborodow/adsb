@@ -20,3 +20,4 @@ vunit_out
 *.gtkw
 *.xsa
 tb/data/gen/
+__pycache__/
