@@ -7,7 +7,7 @@ use work.adsb_pkg.all;
 entity adsb_uart is
     generic (
         SAMPLES_PER_SYMBOL : integer := 31;
-        PREAMBLE_BUFFER_LENGTH : integer := 492;
+        PREAMBLE_BUFFER_LENGTH : integer := 492; -- TODO fix bounds check.
         ACCUMULATION_LENGTH : integer := 4096;
         UART_CLK_DIV : integer := 533
     );
@@ -26,11 +26,9 @@ architecture rtl of adsb_uart is
     constant ADSB_FIFO_WIDTH : integer := 177;
     constant ADSB_FIFO_DEPTH : integer := 4;
 
-    -- Internal registers.
-    signal i_r : iq_t := (others => '0');
-    signal q_r : iq_t := (others => '0');
-    signal d_vld_r : std_logic := '0';
-    signal led_r : std_logic := '0';
+    -- 16 bit IQ to 12 bit registers.
+    signal i_rx_12b_r : iq_t := (others => '0');
+    signal q_rx_12b_r : iq_t := (others => '0');
 
     -- ADSB demodalator and frequency estimator signals.
     signal adsb_detect       : std_logic := '0';
@@ -67,14 +65,14 @@ architecture rtl of adsb_uart is
     signal enc_s_data  : std_logic_vector(7 downto 0) := (others => '0');
 
     -- UART signals.
-    --signal uart_vld : std_logic := '0';
-    --signal uart_rdy : std_logic := '0';
-    --signal uart_data : std_logic_vector(7 downto 0) := (others => '0');
     signal uart_tx : std_logic := '1';
 
+    -- Output registers.
+    signal led_r : std_logic := '0';
+
     -- TODO Test signals.
-    constant UART_TIMER_MAX : positive := 100000;
-    signal uart_timer : natural range 0 to UART_TIMER_MAX-1 := UART_TIMER_MAX-1;
+    --constant UART_TIMER_MAX : positive := 100000;
+    --signal uart_timer : natural range 0 to UART_TIMER_MAX-1 := UART_TIMER_MAX-1;
 
 begin
     u_adsb : entity work.adsb
@@ -85,9 +83,9 @@ begin
         )
         port map (
             clk => clk,
-            d_vld_i => d_vld_r,
-            i_i => i_r,
-            q_i => q_r,
+            d_vld_i => d_vld_i,
+            i_i => i_rx_12b_r,
+            q_i => q_rx_12b_r,
             vld_o => adsb_vld,
             detect_o => adsb_detect,
             rdy_i => adsb_rdy,
@@ -155,11 +153,21 @@ begin
             tx_o => uart_tx
         );
 
-    i_r <= i_i(ADC_RX_IQ_WIDTH-1 downto ADC_RX_IQ_WIDTH-IQ_WIDTH);
-    q_r <= q_i(ADC_RX_IQ_WIDTH-1 downto ADC_RX_IQ_WIDTH-IQ_WIDTH);
-    d_vld_r <= d_vld_i;
-    uart_tx_o <= uart_tx;
-    led_o <= led_r;
+    -- Extract 12 bit IQ data from 16 bits of the receive (rx) ADC.
+    --
+    -- Documentation:
+    --
+    --     https://wiki.analog.com/resources/fpga/docs/axi_ad9361
+    --     https://ez.analog.com/fpga/f/q-a/594383/dynamic-bit-selection-ad9361
+    --     https://ez.analog.com/fpga/f/q-a/106589/how-are-the-16-bit-iq-samples-formatted-in-the-hdl-fmcomms3-zedboard
+    --
+    -- The samples are always 16 bits, regardless of the ADC/DAC data width.
+    -- That is the source or destination is intended to handle samples as 16 bits.
+    -- In the transmit direction, if the DAC data width is less than 16 bits, the
+    -- most significant bits are used. In the receive direction, if the ADC data
+    -- width is less than 16 bits, the most significant bits are sign extended.
+    i_rx_12b_r <= resize(i_i, IQ_WIDTH);
+    q_rx_12b_r <= resize(q_i, IQ_WIDTH);
 
     -- Combinatorial packing for FIFO write data.
     adsb_fifo_wr_data <= adsb_w56 & adsb_data & std_logic_vector(adsb_re) & std_logic_vector(adsb_im);
@@ -169,6 +177,10 @@ begin
     fifo_rd_re_c   <= signed(fifo_rd_data(63 downto 32));
     fifo_rd_im_c   <= signed(fifo_rd_data(31 downto 0));
     fifo_rd_adsb_c <= fifo_rd_data(175 downto 64);
+
+    -- Drive outputs.
+    uart_tx_o <= uart_tx;
+    led_o <= led_r;
 
     main_process : process(clk)
     begin
