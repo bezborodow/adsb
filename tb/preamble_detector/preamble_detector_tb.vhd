@@ -23,6 +23,10 @@ architecture test of preamble_detector_tb is
     signal i_o              : signed(IQ_WIDTH-1 downto 0);
     signal q_o              : signed(IQ_WIDTH-1 downto 0);
 
+    -- Test signals.
+    signal mag_sq_z1        : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
+    signal detect_z1        : std_logic := '0';
+
     -- Clock.
     signal clk: std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
@@ -57,7 +61,6 @@ begin
         variable line_i, line_q : integer;
     begin
         test_runner_setup(runner, runner_cfg);
-        report "Hello world!";
         while not endfile(iq_file) loop
             readline(iq_file, line_buf);
             read(line_buf, line_i);
@@ -72,18 +75,55 @@ begin
         -- End of test! Trigger checks!
         end_of_test <= true;
         wait for clk_period;
+
         
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
     end process stimulus_process;
 
+    -- This process will check that the detect strobe
+    -- is one cycle before the message begins.
     verification_process : process(clk)
+        -- True if on an edge.
+        variable edge : boolean := false;
+
+        -- Counts the number of edges on the envelope have been encountered.
+        variable edge_counter : integer := 0;
+
+        -- When found the detect signal in the correct place.
         variable done : boolean := false;
     begin
         if rising_edge(clk) then
+            mag_sq_z1 <= mag_sq_o;
+            detect_z1 <= detect_o;
+
+            -- Run test verbose to print debug report messages:
+            --
+            --     ./vunit lib.preamble_detector_tb.all -v
+            --
+            if detect_o = '1' then
+                report "Preamble detect strobe fired.";
+            end if;
+
+            if mag_sq_o > 0 and mag_sq_z1 = 0 then
+                edge := true;
+                edge_counter := edge_counter + 1;
+                report "IQ envelope edge encountered: " & integer'image(edge_counter);
+            else
+                edge := false;
+            end if;
+
+            if edge and edge_counter = 5 then
+                check_equal(detect_z1, '1', "Preamble not detected at the correct position. The preamble strobe should fire one cycle before the beginning of the message.");
+                report "Preamble detected successfully.";
+                done := true;
+            else
+                check_equal(detect_z1, '0', "Preamble detected at the incorrect position. Might be too late or too early.");
+            end if;
+
+            --  Check done.
             if end_of_test and not done then
-                -- TODO Check data.
-                --report "Did not receive all expected data." severity failure;
+                report "Did not find the preamble." severity failure;
             end if;
         end if;
     end process verification_process;
