@@ -59,8 +59,8 @@ architecture rtl of adsb is
 begin
     u_detector : entity work.preamble_detector
         generic map (
-            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL,
-            BUFFER_LENGTH      => PREAMBLE_BUFFER_LENGTH
+            SAMPLES_PER_SYMBOL     => SAMPLES_PER_SYMBOL,
+            PREAMBLE_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH
         )
         port map (
             clk => clk,

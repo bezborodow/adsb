@@ -39,7 +39,7 @@ begin
     uut : entity work.preamble_detector
         generic map (
             SAMPLES_PER_SYMBOL => 10,
-            BUFFER_LENGTH => 160
+            PREAMBLE_BUFFER_LENGTH => 160
         )
         port map (
             clk              => clk,

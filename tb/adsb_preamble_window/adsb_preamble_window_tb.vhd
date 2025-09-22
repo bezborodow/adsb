@@ -5,6 +5,7 @@ use std.textio.all;
 use ieee.math_real.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
+use work.adsb_pkg.all;
 
 entity adsb_preamble_window_tb is
 --  port ( );
@@ -12,20 +13,16 @@ entity adsb_preamble_window_tb is
 end adsb_preamble_window_tb;
 
 architecture test of adsb_preamble_window_tb is
-    constant IQ_WIDTH : integer := 12;
-    constant MAGNITUDE_WIDTH : integer := IQ_WIDTH * 2 + 1;
-    constant BUFFER_ACCUMULATOR_WIDTH : positive := MAGNITUDE_WIDTH + integer(ceil(log2(real(160)))); -- TODO move to generic package?
-
     -- UUT signals.
     signal ce_i                  : std_logic := '1';
-    signal i_i                   : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal q_i                   : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal mag_sq_i              : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
-    signal i_o                   : signed(IQ_WIDTH-1 downto 0);
-    signal q_o                   : signed(IQ_WIDTH-1 downto 0);
-    signal mag_sq_o              : unsigned(MAGNITUDE_WIDTH-1 downto 0);
-    signal win_inside_energy_o   : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0);
-    signal win_outside_energy_o  : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0);
+    signal i_i                   : iq_t := (others => '0');
+    signal q_i                   : iq_t := (others => '0');
+    signal mag_sq_i              : mag_sq_t := (others => '0');
+    signal i_o                   : iq_t;
+    signal q_o                   : iq_t;
+    signal mag_sq_o              : mag_sq_t;
+    signal win_inside_energy_o   : win_energy_t;
+    signal win_outside_energy_o  : win_energy_t;
 
     -- Clock.
     signal clk: std_logic := '1';
@@ -38,7 +35,8 @@ begin
     
     uut : entity work.adsb_preamble_window
         generic map (
-            SAMPLES_PER_SYMBOL => 10
+            SAMPLES_PER_SYMBOL => 10,
+            PREAMBLE_BUFFER_LENGTH => 160
         )
         port map (
             clk                  => clk,
@@ -61,7 +59,7 @@ begin
         variable q_v : signed(IQ_WIDTH-1 downto 0) := (others => '0');
         variable i_sq_v : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
         variable q_sq_v : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
-        variable mag_sq_v : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+        variable mag_sq_v : mag_sq_t := (others => '0');
     begin
         test_runner_setup(runner, runner_cfg);
         while not endfile(iq_file) loop
@@ -105,7 +103,7 @@ begin
     verify_synchronisation_process : process(clk)
         variable i_sq_v : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
         variable q_sq_v : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
-        variable mag_sq_v : unsigned(MAGNITUDE_WIDTH-1 downto 0) := (others => '0');
+        variable mag_sq_v : mag_sq_t := (others => '0');
     begin
         if rising_edge(clk) then
             -- Ensure that IQ is synchronised with the envelope (magnitude squared.)

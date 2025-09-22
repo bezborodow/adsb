@@ -11,16 +11,16 @@ entity adsb_preamble_peak is
     port (
         clk : in std_logic;
         ce_i : in std_logic; -- Clock enable.
-        i_i : in signed(IQ_WIDTH-1 downto 0);
-        q_i : in signed(IQ_WIDTH-1 downto 0);
+        i_i : in iq_t;
+        q_i : in iq_t;
         mag_sq_i : in mag_sq_t;
         max_mag_sq_i : in mag_sq_t;
-        win_inside_energy_i : in unsigned(IQ_MAG_SQ_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0); -- TODO Move constant to package?
-        win_outside_energy_i : in unsigned(IQ_MAG_SQ_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0);
+        win_inside_energy_i : in win_energy_t;
+        win_outside_energy_i : in win_energy_t;
         all_thresholds_ok_i : in std_logic;
 
-        i_o : out signed(IQ_WIDTH-1 downto 0);
-        q_o : out signed(IQ_WIDTH-1 downto 0);
+        i_o : out iq_t;
+        q_o : out iq_t;
         mag_sq_o : out mag_sq_t;
         max_mag_sq_o : out mag_sq_t;
         detect_o : out std_logic
@@ -34,12 +34,12 @@ architecture rtl of adsb_preamble_peak is
 
     -- Record buffer for samples that come from the windower with threshold and energy metadata.
     type windowed_sample_record_t is record
-        i             : signed(IQ_WIDTH-1 downto 0);
-        q             : signed(IQ_WIDTH-1 downto 0);
+        i             : iq_t;
+        q             : iq_t;
         mag_sq        : mag_sq_t;
         max_mag_sq    : mag_sq_t;
-        win_ei        : unsigned(win_inside_energy_i'length-1 downto 0);
-        win_eo        : unsigned(win_outside_energy_i'length-1 downto 0);
+        win_ei        : win_energy_t;
+        win_eo        : win_energy_t;
         thresholds_ok : std_logic;
     end record;
     type windowed_sample_record_array_t is array (natural range <>) of windowed_sample_record_t;
@@ -58,7 +58,7 @@ architecture rtl of adsb_preamble_peak is
     -- Peak detection signals.
     -- Array of products used in cross-multiplication and comparison.
     constant K_MAX : natural := RECORD_ARRAY_LENGTH - 2;
-    subtype energy_product_t is unsigned(win_inside_energy_i'length*2-1 downto 0);
+    subtype energy_product_t is unsigned(win_energy_t'length*2-1 downto 0);
     type energy_product_array_t is array (0 to K_MAX) of energy_product_t;
     signal lhs_r, lhs_z1 : energy_product_array_t := (others => (others => '0'));
     signal rhs_r, rhs_z1 : energy_product_array_t := (others => (others => '0'));
@@ -73,8 +73,8 @@ architecture rtl of adsb_preamble_peak is
     signal thres_ok_z3 : std_logic := '0';
 
     -- Registered signals for outputs.
-    signal i_r, i_z3 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal q_r, q_z3 : signed(IQ_WIDTH-1 downto 0) := (others => '0');
+    signal i_r, i_z3 : iq_t := (others => '0');
+    signal q_r, q_z3 : iq_t := (others => '0');
     signal mag_sq_r, mag_sq_z3 : mag_sq_t := (others => '0');
     signal max_mag_sq_r, max_mag_sq_z3 : mag_sq_t := (others => '0');
     signal detect_r : std_logic := '0';
@@ -122,8 +122,8 @@ begin
     peak_detector_process : process(clk)
         variable centre_v : windowed_sample_record_t;
         variable local_maximum_v : std_logic := '0';
-        variable eai_v, ebi_v : unsigned(win_inside_energy_i'length-1 downto 0) := (others => '0');
-        variable eao_v, ebo_v : unsigned(win_outside_energy_i'length-1 downto 0) := (others => '0');
+        variable eai_v, ebi_v : win_energy_t:= (others => '0');
+        variable eao_v, ebo_v : win_energy_t := (others => '0');
         variable k : integer range 0 to 3 := 0;
     begin
         if rising_edge(clk) then

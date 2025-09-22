@@ -6,8 +6,8 @@ use work.adsb_pkg.all;
 
 entity preamble_detector is
     generic (
-        SAMPLES_PER_SYMBOL    : integer;
-        BUFFER_LENGTH         : integer
+        SAMPLES_PER_SYMBOL     : integer;
+        PREAMBLE_BUFFER_LENGTH : integer
     );
     port (
         clk : in std_logic;
@@ -25,37 +25,35 @@ entity preamble_detector is
 end preamble_detector;
 
 architecture rtl of preamble_detector is
-    -- Accumulator width for for entire preamble buffer.
-    constant BUFFER_ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
-
     -- Envelope outputs (inputs to the windower.)
-    signal env_i        : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal env_q        : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal env_mag_sq   : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
+    -- The envelope detector outputs magnitude squared from IQ.
+    signal env_i        : iq_t := (others => '0');
+    signal env_q        : iq_t := (others => '0');
+    signal env_mag_sq   : mag_sq_t := (others => '0');
 
     -- Windower outputs (inputs to the peak detector.)
-    signal win_i              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal win_q              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal win_mag_sq         : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
-    signal win_inside_energy  : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
-    signal win_outside_energy : unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
-    signal win_max_mag_sq     : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
-    signal win_thres_ok       : std_logic;
+    signal win_i              : iq_t := (others => '0');
+    signal win_q              : iq_t := (others => '0');
+    signal win_mag_sq         : mag_sq_t := (others => '0');
+    signal win_max_mag_sq     : mag_sq_t := (others => '0');
+    signal win_inside_energy  : win_energy_t := (others => '0');
+    signal win_outside_energy : win_energy_t := (others => '0');
+    signal win_thres_ok       : std_logic := '0';
 
     -- Peak outputs (final outputs from the cascade.)
-    signal pk_i          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal pk_q          : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal pk_mag_sq     : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
-    signal pk_max_mag_sq : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
+    signal pk_i          : iq_t := (others => '0');
+    signal pk_q          : iq_t := (others => '0');
+    signal pk_mag_sq     : mag_sq_t := (others => '0');
+    signal pk_max_mag_sq : mag_sq_t := (others => '0');
     signal pk_detect     : std_logic := '0';
 
     -- Output registers.
-    signal i_r              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal q_r              : signed(IQ_WIDTH-1 downto 0) := (others => '0');
-    signal mag_sq_r         : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
+    signal i_r              : iq_t := (others => '0');
+    signal q_r              : iq_t := (others => '0');
+    signal mag_sq_r         : mag_sq_t := (others => '0');
     signal detect_r         : std_logic := '0';
-    signal high_threshold_r : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
-    signal low_threshold_r  : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
+    signal high_threshold_r : mag_sq_t := (others => '0');
+    signal low_threshold_r  : mag_sq_t := (others => '0');
 
 begin
     -- Magnitude-squared envelope detector.
@@ -75,7 +73,8 @@ begin
     -- Used instead of a correlator; not the same thing, but similar purpose!
     u_windower : entity work.adsb_preamble_window
         generic map (
-            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL
+            SAMPLES_PER_SYMBOL     => SAMPLES_PER_SYMBOL,
+            PREAMBLE_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH
         )
         port map (
             clk                  => clk,

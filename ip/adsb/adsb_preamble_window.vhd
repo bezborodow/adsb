@@ -6,31 +6,29 @@ use work.adsb_pkg.all;
 
 entity adsb_preamble_window is
     generic (
-        SAMPLES_PER_SYMBOL : positive
+        SAMPLES_PER_SYMBOL     : positive;
+        PREAMBLE_BUFFER_LENGTH : integer
     );
     port (
         clk : in std_logic;
         ce_i : in std_logic; -- Clock enable.
-        i_i : in signed(IQ_WIDTH-1 downto 0);
-        q_i : in signed(IQ_WIDTH-1 downto 0);
-        mag_sq_i : in unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
+        i_i : in iq_t;
+        q_i : in iq_t;
+        mag_sq_i : in mag_sq_t;
 
-        i_o : out signed(IQ_WIDTH-1 downto 0);
-        q_o : out signed(IQ_WIDTH-1 downto 0);
-        mag_sq_o : out unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
-        max_mag_sq_o : out unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
-        win_inside_energy_o : out unsigned(IQ_MAG_SQ_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0); -- TODO Move constant to package?
-        win_outside_energy_o : out unsigned(IQ_MAG_SQ_WIDTH+integer(ceil(log2(real(16 * SAMPLES_PER_SYMBOL))))-1 downto 0);
+        i_o : out iq_t;
+        q_o : out iq_t;
+        mag_sq_o : out mag_sq_t;
+        max_mag_sq_o : out mag_sq_t;
+        win_inside_energy_o : out win_energy_t;
+        win_outside_energy_o : out win_energy_t;
         all_thresholds_ok_o : out std_logic
     );
 end adsb_preamble_window;
 
 architecture rtl of adsb_preamble_window is
-    -- Length of the preamble buffer.
-    constant BUFFER_LENGTH : positive := 16 * SAMPLES_PER_SYMBOL;
-
     -- Accumulator width for for entire preamble buffer.
-    constant BUFFER_ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(BUFFER_LENGTH))));
+    constant BUFFER_ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(PREAMBLE_BUFFER_LENGTH))));
 
     -- Accumulator width for a single symbol.
     constant SYMBOL_ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(SAMPLES_PER_SYMBOL))));
@@ -50,8 +48,8 @@ architecture rtl of adsb_preamble_window is
     -- preamble and is used for preamble detection.
     -- The IQ buffer is for timing and is as long as the number of delay clock
     -- cycles of this component.
-    subtype mag_sq_buffer_index_t is natural range 0 to BUFFER_LENGTH-1;
-    signal mag_sq_buf_shift_reg : mag_sq_buffer_t(0 to BUFFER_LENGTH-1) := (others => (others => '0'));
+    subtype mag_sq_buffer_index_t is natural range 0 to PREAMBLE_BUFFER_LENGTH-1;
+    signal mag_sq_buf_shift_reg : mag_sq_buffer_t(0 to PREAMBLE_BUFFER_LENGTH-1) := (others => (others => '0'));
 
     -- Symbol window register.
     type symbol_t is array (natural range <>) of mag_sq_buffer_t(0 to SAMPLES_PER_SYMBOL-1);
@@ -84,14 +82,14 @@ architecture rtl of adsb_preamble_window is
 
     -- Stage 5 registered signals.
     signal stage5_max_mag_sq_r         : mag_sq_t := (others => '0');
-    signal stage5_win_inside_energy_r  : buffer_energy_t := (others => '0');
-    signal stage5_win_outside_energy_r : buffer_energy_t := (others => '0');
+    signal stage5_win_inside_energy_r  : win_energy_t := (others => '0'); -- Shrink (resize) at stage 5.
+    signal stage5_win_outside_energy_r : win_energy_t := (others => '0');
     signal stage5_win_total_energy_r   : buffer_energy_t := (others => '0');
     signal stage5_symbol_energy_a_r    : symbol_energy_array_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => '0'));
 
     -- Output registers.
-    signal win_inside_energy_r : buffer_energy_t := (others => '0');
-    signal win_outside_energy_r : buffer_energy_t := (others => '0');
+    signal win_inside_energy_r : win_energy_t := (others => '0');
+    signal win_outside_energy_r : win_energy_t := (others => '0');
     signal max_mag_sq_r : mag_sq_t := (others => '0');
     signal i_r, q_r : iq_t := (others => '0');
     signal mag_sq_r : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
@@ -158,12 +156,12 @@ begin
         if rising_edge(clk) then
             if ce_i = '1' then
                 -- Append most recently arrived sample onto the end of the shift register.
-                mag_sq_buf_shift_reg(BUFFER_LENGTH-1) <= mag_sq_i;
+                mag_sq_buf_shift_reg(PREAMBLE_BUFFER_LENGTH-1) <= mag_sq_i;
                 i_buf_reg(PIPELINE_DELAY-1) <= i_i;
                 q_buf_reg(PIPELINE_DELAY-1) <= q_i;
                 
                 -- Pipeline shift registers for IQ and magnitude squared envelope.
-                for i in 0 to BUFFER_LENGTH-2 loop
+                for i in 0 to PREAMBLE_BUFFER_LENGTH-2 loop
                     mag_sq_buf_shift_reg(i) <= mag_sq_buf_shift_reg(i+1);
                 end loop;
                 for i in 0 to PIPELINE_DELAY-2 loop
@@ -295,8 +293,8 @@ begin
         if rising_edge(clk) then
             if ce_i = '1' then
                 stage5_max_mag_sq_r <= stage4_max_mag_sq_r;
-                stage5_win_inside_energy_r <= stage4_win_inside_energy_r;
-                stage5_win_outside_energy_r <= stage4_win_outside_energy_r;
+                stage5_win_inside_energy_r <= shrink_right(stage4_win_inside_energy_r, win_energy_t'length);
+                stage5_win_outside_energy_r <= shrink_right(stage4_win_outside_energy_r, win_energy_t'length);
                 stage5_win_total_energy_r <= stage4_win_inside_energy_r + stage4_win_outside_energy_r;
                 stage5_symbol_energy_a_r <= stage4_symbol_energy_a_r;
             end if;
@@ -345,7 +343,7 @@ begin
             if ce_i = '1' then
                 i_r <= i_buf_reg(0);
                 q_r <= q_buf_reg(0);
-                mag_sq_r <= mag_sq_buf_shift_reg(BUFFER_LENGTH - PIPELINE_DELAY);
+                mag_sq_r <= mag_sq_buf_shift_reg(PREAMBLE_BUFFER_LENGTH - PIPELINE_DELAY);
             end if;
         end if;
     end process delay_process;

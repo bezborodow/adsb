@@ -153,8 +153,8 @@ begin
                 if accumulator_full or stop_i = '1' then
                     if enable = '1' and accumulation_count > 0 then
                         -- Resize to a smaller complex number.
-                        est_re_r <= resize(shift_right(accumulator_re, accumulator_re'length - est_re_r'length), est_re_r'length);
-                        est_im_r <= resize(shift_right(accumulator_im, accumulator_im'length - est_im_r'length), est_im_r'length);
+                        est_re_r <= shrink_right(accumulator_re, est_re_r'length);
+                        est_im_r <= shrink_right(accumulator_im, est_im_r'length);
                         vld_r <= '1';
                     end if;
 
