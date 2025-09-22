@@ -115,35 +115,35 @@ begin
             detect_o             => pk_detect
         );
 
-        -- Drive outputs with registers.
-        i_o              <= i_r;
-        q_o              <= q_r;
-        mag_sq_o         <= mag_sq_r;
-        detect_o         <= detect_r;
-        high_threshold_o <= high_threshold_r;
-        low_threshold_o  <= low_threshold_r;
+    -- Drive outputs with registers.
+    i_o              <= i_r;
+    q_o              <= q_r;
+    mag_sq_o         <= mag_sq_r;
+    detect_o         <= detect_r;
+    high_threshold_o <= high_threshold_r;
+    low_threshold_o  <= low_threshold_r;
 
-        -- Set up high and low hysteresis thresholds for the Schmitt trigger.
-        schmitt_trigger_process : process(clk)
-        begin
-            if rising_edge(clk) then
-                if ce_i = '1' then
+    -- Set up high and low hysteresis thresholds for the Schmitt trigger.
+    schmitt_trigger_process : process(clk)
+    begin
+        if rising_edge(clk) then
+            if ce_i = '1' then
 
-                    -- Pass through signals to the next stage, which is the Schmitt trigger.
-                    i_r      <= pk_i;
-                    q_r      <= pk_q;
-                    mag_sq_r <= pk_mag_sq;
-                    detect_r <= pk_detect;
+                -- Pass through signals to the next stage, which is the Schmitt trigger.
+                i_r      <= pk_i;
+                q_r      <= pk_q;
+                mag_sq_r <= pk_mag_sq;
+                detect_r <= pk_detect;
 
-                    -- Latch the hysteresis thresholds when a preamble is detected.
-                    if pk_detect = '1' then
-                        -- High hysteresis threshold is half of the maximum of the envelope.
-                        high_threshold_r <= pk_max_mag_sq srl 1;
+                -- Latch the hysteresis thresholds when a preamble is detected.
+                if pk_detect = '1' then
+                    -- High hysteresis threshold is half of the maximum of the envelope.
+                    high_threshold_r <= pk_max_mag_sq srl 1;
 
-                        -- Low hysteresis threshold is one eighth of the maximum of the envelope.
-                        low_threshold_r <= pk_max_mag_sq srl 3;
-                    end if;
+                    -- Low hysteresis threshold is one eighth of the maximum of the envelope.
+                    low_threshold_r <= pk_max_mag_sq srl 3;
                 end if;
             end if;
-        end process schmitt_trigger_process;
+        end if;
+    end process schmitt_trigger_process;
 end rtl;
