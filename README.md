@@ -29,6 +29,13 @@ source /opt/Xilinx/Vivado/2023.2/settings64.sh
     adrv_lvds/u-boot_zynq_adrv9361.elf
 ```
 
+## Connecting over UART
+
+```
+dmesg -w
+screen /dev/ttyUSB1 115200
+```
+
 ## Setting Carrier and Sampling Frequencies
 
 ```
