@@ -35,7 +35,7 @@ architecture test of preamble_detector_tb is
     signal end_of_test : boolean := false;
 begin
     clk <= not clk after clk_period / 2;
-    
+
     uut : entity work.preamble_detector
         generic map (
             SAMPLES_PER_SYMBOL => 10,
@@ -54,7 +54,6 @@ begin
             q_o              => q_o
         );
 
-    
     stimulus_process : process
         file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
         variable line_buf : line;
@@ -76,7 +75,6 @@ begin
         end_of_test <= true;
         wait for clk_period;
 
-        
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
     end process stimulus_process;

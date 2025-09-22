@@ -16,11 +16,13 @@ architecture test of adsb_tb is
 
     signal clk: std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
+    signal end_of_test : boolean := false;
 
-    signal adsb_vld: std_logic := '0';
-    signal adsb_rdy: std_logic := '0';
-    signal adsb_data: std_logic_vector(111 downto 0) := (others =>'0');
-    signal adsb_w56: std_logic := '0';
+    signal adsb_detect : std_logic := '0';
+    signal adsb_vld : std_logic := '0';
+    signal adsb_rdy : std_logic := '0';
+    signal adsb_data : std_logic_vector(111 downto 0) := (others =>'0');
+    signal adsb_w56 : std_logic := '0';
 
 begin
     clk <= not clk after clk_period / 2;
@@ -36,6 +38,7 @@ begin
             d_vld_i => '1',
             i_i => input_i,
             q_i => input_q,
+            detect_o => adsb_detect,
             vld_o => adsb_vld,
             rdy_i => adsb_rdy,
             data_o => adsb_data,
@@ -60,18 +63,60 @@ begin
             wait for clk_period;
         end loop;
 
-        assert adsb_vld = '1' report "Not valid. Should be valid.";
-        adsb_rdy <= '1';
-        wait for clk_period;
-
-        assert adsb_vld = '1';
-        adsb_rdy <= '0';
-        wait for clk_period;
-
-        assert adsb_vld = '0';
-        wait for clk_period * 20;
+        -- End of test! Trigger checks!
+        end_of_test <= true;
+        wait for clk_period * 2;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
     end process main;
+
+    -- This process will check for valid ADS-B data.
+    verification_process : process(clk)
+        -- Done when found valid ADS-B data.
+        constant expected_message : std_logic_vector(111 downto 0) := x"8D7C79B46915452064F7B51A9D3A";
+        variable preamble_detected : boolean := false;
+        variable valid_message : boolean := false;
+        variable done : boolean := false;
+    begin
+        if rising_edge(clk) then
+            -- Check for preamble detection.
+            if adsb_detect = '1' then
+                if preamble_detected then
+                    report "Only expect a preamble detection once!" severity failure;
+                end if;
+                preamble_detected := true;
+            end if;
+
+            -- Wait for valid message.
+            if preamble_detected and adsb_vld = '1' then
+
+                -- Check ADS-B message.
+                report "ADS-B Message: " & to_hstring(adsb_data);
+                check_equal(adsb_data, expected_message, "ADS-B message mismatch.");
+                assert adsb_w56 = '0' report "Expected 112 bits, so w56 should be low." severity failure;
+                valid_message := true;
+
+                -- Valid/ready handshake; ready high.
+                adsb_rdy <= '1';
+            end if;
+
+            -- Check that valid flag is lowered after the handshake.
+            if valid_message and adsb_vld = '0' then
+                done := true;
+                adsb_rdy <= '0';
+            end if;
+
+            --  Check done.
+            if end_of_test and not preamble_detected then
+                report "Did not detect the ADS-B preamble." severity failure;
+            end if;
+            if end_of_test and not valid_message then
+                report "Did not demodulate the ADS-B message." severity failure;
+            end if;
+            if end_of_test and not done then
+                report "The valid flag was not lowered after asserting ready." severity failure;
+            end if;
+        end if;
+    end process verification_process;
 end test;
