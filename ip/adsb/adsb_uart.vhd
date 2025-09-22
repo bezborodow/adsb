@@ -74,6 +74,14 @@ architecture rtl of adsb_uart is
     --constant UART_TIMER_MAX : positive := 100000;
     --signal uart_timer : natural range 0 to UART_TIMER_MAX-1 := UART_TIMER_MAX-1;
 
+    -- Serialiser signals.
+    signal mux_uart_vld   : std_logic := '0';
+    signal mux_uart_last  : std_logic := '0';                  -- Last byte indicator.
+    signal mux_uart_rdy   : std_logic;
+    signal mux_uart_data  : std_logic_vector(7 downto 0) := (others => '0');
+    signal mux_uart_ascii : std_logic := '0';                  -- Convert to ASCII.
+    signal mux_uart_eom   : std_logic := '0';                  -- End-of-message (newline.)
+
 begin
     u_adsb : entity work.adsb
         generic map (
@@ -122,7 +130,8 @@ begin
             m_est_im_i => fifo_rd_im_c,
             s_vld_o    => srl_s_vld,
             s_last_o   => srl_s_last,
-            s_rdy_i    => srl_s_rdy,
+            --s_rdy_i    => srl_s_rdy,
+            s_rdy_i    => mux_uart_rdy,
             s_data_o   => srl_s_data,
             s_ascii_o  => srl_s_ascii,
             s_eom_o    => srl_s_eom
@@ -131,11 +140,16 @@ begin
     u_uart_tx_enc : entity work.uart_tx_enc
         port map (
             clk => clk,
-            m_vld_i => srl_s_vld,
-            m_rdy_o => srl_s_rdy,
-            m_data_i => srl_s_data,
-            m_ascii_i => srl_s_ascii,
-            m_eom_i => srl_s_eom,
+            --m_vld_i => srl_s_vld,
+            --m_rdy_o => srl_s_rdy,
+            --m_data_i => srl_s_data,
+            --m_ascii_i => srl_s_ascii,
+            --m_eom_i => srl_s_eom,
+            m_vld_i => mux_uart_vld,
+            m_rdy_o => mux_uart_rdy,
+            m_data_i => mux_uart_data,
+            m_ascii_i => mux_uart_ascii,
+            m_eom_i => mux_uart_eom,
             s_vld_o => enc_s_vld,
             s_rdy_i => enc_s_rdy,
             s_data_o => enc_s_data
@@ -183,12 +197,39 @@ begin
     led_o <= led_r;
 
     main_process : process(clk)
+        subtype t_uart_idle is integer range 0 to 61_440_000;
+        variable timer_uart_idle : t_uart_idle := 0;
     begin
         if rising_edge(clk) then
             if adsb_detect = '1' then
                 -- Turn on LED if a valid ADS-B message was detected.
                 -- TODO maybe put this on a timer.
                 led_r <= '1';
+            end if;
+
+            if srl_s_vld = '0' and timer_uart_idle = 0 then
+                mux_uart_vld <= '1';
+                mux_uart_data <= x"2E";
+                mux_uart_ascii <= '0';
+                mux_uart_eom <= '1';
+                mux_uart_last <= '1';
+            else
+                mux_uart_vld <= srl_s_vld;
+                mux_uart_data <= srl_s_data;
+                mux_uart_ascii <= srl_s_ascii;
+                mux_uart_eom <= srl_s_eom;
+                mux_uart_last <= srl_s_last;
+                srl_s_rdy <= mux_uart_rdy;
+            end if;
+
+            -- Increment idle timer and reset.
+            if timer_uart_idle < t_uart_idle'high then
+                timer_uart_idle := timer_uart_idle + 1;
+            else
+                timer_uart_idle := 0;
+            end if;
+            if srl_s_vld = '1' then
+                timer_uart_idle := 0;
             end if;
         end if;
     end process main_process;
