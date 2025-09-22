@@ -33,8 +33,8 @@ architecture rtl of adsb is
 
     -- Preamble detector signals.
     signal detect : std_logic := '0';
-    signal high_threshold : mag_sq_t := (others => '0');
-    signal low_threshold : mag_sq_t := (others => '0');
+    signal detector_high_threshold : mag_sq_t := (others => '0');
+    signal detector_low_threshold : mag_sq_t := (others => '0');
     signal detector_mag_sq : mag_sq_t := (others => '0');
     signal detector_i : iq_t := (others => '0');
     signal detector_q : iq_t := (others => '0');
@@ -68,8 +68,8 @@ begin
             i_i => i_i,
             q_i => q_i,
             detect_o => detect,
-            high_threshold_o => high_threshold,
-            low_threshold_o => low_threshold,
+            high_threshold_o => detector_high_threshold,
+            low_threshold_o => detector_low_threshold,
 
             i_o => detector_i,
             q_o => detector_q,
@@ -87,8 +87,8 @@ begin
             clk => clk,
             ce_i => d_vld_r,
             schmitt_i => detector_mag_sq,
-            high_threshold_i => high_threshold,
-            low_threshold_i => low_threshold,
+            high_threshold_i => detector_high_threshold,
+            low_threshold_i => detector_low_threshold,
             schmitt_o => trigger_envelope
         );
 
