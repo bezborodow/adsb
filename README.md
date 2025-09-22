@@ -16,16 +16,21 @@ Based on [ADRV9364Z7020 HDL Project](https://analogdevicesinc.github.io/hdl/proj
 ## Building BOOT.BIN
 
 Get ELF from `bootgen_sysfiles.tgz` on BOOT partition of Kuiper Linux.
+The file `u-boot_zynq_adrv9361.elf` is in the tar archive.
+
+After generating the bitstream, do File -> Export -> Export Hardware.
+This will export the `system_top.xsa`.
 
 Under wiki-scripts:
 
 ```
+find . -name system_top.xsa
 git clone git@github.com:analogdevicesinc/wiki-scripts.git ../wiki-scripts/
 cd ../wiki-scripts/
 cd zynq_boot_bin/
 source /opt/Xilinx/Vivado/2023.2/settings64.sh
 ./build_boot_bin.sh \
-    ~/src/adsb/adrv9364z7020_adsb/adrv9364z7020_adsb.sdk/system_top.xsa \
+    ~/src/adsb/adrv9364z7020_adsb/system_top.xsa \
     adrv_lvds/u-boot_zynq_adrv9361.elf
 ```
 
