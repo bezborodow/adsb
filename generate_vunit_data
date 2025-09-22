@@ -88,9 +88,6 @@ sigout = amplitude * (carrier_i * envelope + 1j * carrier_q * envelope)
 print(sigout);
 
 
-
-
-
 # --- Write IQ file ---
 bits = 12
 scale = 2**(bits - 1) - 1
@@ -98,9 +95,38 @@ gain = 0.75 # Headroom.
 scaled_i = (sigout.real * scale * gain).astype(int)
 scaled_q = (sigout.imag * scale * gain).astype(int)
 os.makedirs("tb/data/gen/", exist_ok=True)
-filename = "tb/data/gen/adsb_61_44.dat"
+filename = "tb/data/gen/adsb_61_440_000_hertz.dat"
 with open(filename, "w") as f:
     for i in range(len(scaled_i)):
         f.write(f"{scaled_i[i]} {scaled_q[i]}\n")
 
 print(f"Wrote '{filename}'.")
+
+
+
+
+
+
+
+
+# Load saved IQ file.
+# head -c 49152 tb/data/40e6/segments/20250430_7C79B4/cap1/seg16 > tb/data/40e6/segments/20250430_7C79B4/cap1/seg16_truncated
+rx = np.fromfile('tb/data/40e6/segments/20250430_7C79B4/cap1/seg16_truncated', dtype=np.complex64)
+
+# Scale to 12-bit signed integers
+max_val = np.max(np.abs(rx))
+scale = 2047 / max_val if max_val != 0 else 1
+
+# Convert real and imaginary parts separately
+i_scaled = np.round(np.real(rx) * scale).astype(np.int16)
+q_scaled = np.round(np.imag(rx) * scale).astype(np.int16)
+
+# Clip to ensure 12-bit range
+i_scaled = np.clip(i_scaled, -2048, 2047)
+q_scaled = np.clip(q_scaled, -2048, 2047)
+
+# Prepare I/Q pairs
+iq_pairs = np.column_stack((i_scaled, q_scaled))
+
+# Save to text file in the desired format
+np.savetxt('tb/data/gen/adsb_capture_40_000_000_hertz.dat', iq_pairs, fmt='%d')

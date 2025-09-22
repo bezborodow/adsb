@@ -27,9 +27,9 @@ begin
 
     uut : entity work.adsb
         generic map (
-            SAMPLES_PER_SYMBOL     => 10,
-            PREAMBLE_BUFFER_LENGTH => 160,
-            ACCUMULATION_LENGTH    => 1024
+            SAMPLES_PER_SYMBOL     => 20,
+            PREAMBLE_BUFFER_LENGTH => 320,
+            ACCUMULATION_LENGTH    => 2048
         )
         port map (
             clk => clk,
@@ -43,7 +43,7 @@ begin
         );
 
     main : process
-        file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
+        file iq_file : text open read_mode is "tb/data/gen/adsb_capture_40_000_000_hertz.dat";
         variable line_buf : line;
         variable line_i, line_q : integer;
     begin
