@@ -25,7 +25,7 @@ entity freq_est is
 end freq_est;
 
 architecture rtl of freq_est is
-    constant ACCUMULATOR_WIDTH : integer := IQ_WIDTH * 2 + 1 + integer(ceil(log2(real(ACCUMULATION_LENGTH))));
+    constant ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(ACCUMULATION_LENGTH))));
 
     -- Phasor subtypes.
     constant PHASOR_WIDTH : positive := IQ_WIDTH * 2 + 1;
