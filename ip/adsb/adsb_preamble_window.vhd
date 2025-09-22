@@ -245,7 +245,7 @@ begin
                 -- For each symbol window.
                 for i in 0 to NUM_SYMBOLS_IN_PREAMBLE-1 loop
 
-                    -- Register z1 before passing to DSP.
+                    -- Delay one cycle.
                     symbol_energy_a_z1(i) <= symbol_energy_a(i);
 
                     -- Summation of window energy.

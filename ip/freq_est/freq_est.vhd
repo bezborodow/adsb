@@ -39,8 +39,8 @@ architecture rtl of freq_est is
     signal gate_z0, gate_z1 : std_logic := '0';
 
     -- Phasor calculation.
-    signal ph_re0, ph_re1, ph_re0_z1, ph_re1_z1 : phasor_t := (others => '0');
-    signal ph_im0, ph_im1, ph_im0_z1, ph_im1_z1 : phasor_t := (others => '0');
+    signal ph_re0, ph_re1, ph_re0_z1, ph_re1_z1 : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
+    signal ph_im0, ph_im1, ph_im0_z1, ph_im1_z1 : signed(IQ_WIDTH*2-1 downto 0) := (others => '0');
 
     -- Phasor real and imaginary parts.
     signal phasor_re : phasor_t := (others => '0');
@@ -112,10 +112,10 @@ begin
 
                 -- Stage 1: Multiplication.
                 if (gate_i = '1') and (gate_z1 = '1') and (enable = '1') and not accumulator_full then
-                    ph_re0 <= resize(i_z0 * i_z1, ph_re0'length);
-                    ph_re1 <= resize(q_z0 * q_z1, ph_re1'length);
-                    ph_im0 <= resize(q_z0 * i_z1, ph_im0'length);
-                    ph_im1 <= resize(i_z0 * q_z1, ph_im1'length);
+                    ph_re0 <= i_z0 * i_z1;
+                    ph_re1 <= q_z0 * q_z1;
+                    ph_im0 <= q_z0 * i_z1;
+                    ph_im1 <= i_z0 * q_z1;
                     enable_z1 <= '1';
                 else
                     ph_re0 <= (others => '0');
