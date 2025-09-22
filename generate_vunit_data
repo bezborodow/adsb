@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+import numpy as np
+import os
+
+fs = 61.44e6 # Sample rate.
+fc = 5e6 # Carrier.
+T = 1/fs
+half_us = 0.5e-6       # half-microsecond resolution
+silence_us = 10        # before and after
+preamble_bits = 0b1010000101000000
+adsb_message = "8D7C7A465815B0B6ADBBB2611F7B"
+
+# --- Silence slots ---
+num_silence_slots = int(round(silence_us / (half_us*1e6)))  # number of 0.5 us slots
+silence_slots = [0] * num_silence_slots
+
+# --- Preamble slots (16 half-us) ---
+pre_bits = []
+for b in range(15, -1, -1):  # MSB-first
+    pre_bits.append((preamble_bits >> b) & 1)
+
+# --- Message slots ---
+# Each ADS-B bit is 1 us = 2 half-us slots
+msg_bits = []
+for i in range(0, len(adsb_message), 2):  # parse byte by byte
+    byte = int(adsb_message[i:i+2], 16)
+    for b in range(7, -1, -1):           # MSB-first
+        bit = (byte >> b) & 1
+        # map bit to 2 half-us slots: 1 -> [1,0], 0 -> [0,1] (PPM)
+        if bit:
+            msg_bits.extend([1, 0])
+        else:
+            msg_bits.extend([0, 1])
+
+# --- Combine everything ---
+pattern_half = []
+pattern_half.extend(silence_slots)
+pattern_half.extend(pre_bits)
+pattern_half.extend(msg_bits)
+pattern_half.extend(silence_slots)
+
+print("Total half-us slots:", len(pattern_half))
+print("First 50 slots:", pattern_half[:50])
+
+
+
+
+
+
+# Parameters (tweak if you want)
+half_us = 0.5e-6       # half-microsecond slot
+samples_per_half_exact = fs * half_us  # fractional samples per half-us slot
+amplitude = 1.0        # final float amplitude (apply additional gain later)
+
+# 1) compute integer sample counts per half-us slot using fractional accumulation
+samples_list = []
+accum = 0.0
+for slot_val in pattern_half:
+    accum += samples_per_half_exact
+    n_samples = int(round(accum))
+    # safety: ensure at least 1 sample for slots (shouldn't be 0 for typical fs)
+    if n_samples < 1:
+        n_samples = 1
+    samples_list.append(n_samples)
+    accum -= n_samples  # carry remainder forward
+
+# 2) total samples and per-sample carrier (phase continuous)
+total_samples = sum(samples_list)
+n = np.arange(total_samples)
+phase = 2.0 * np.pi * fc * n / fs
+carrier_i = np.cos(phase)
+carrier_q = np.sin(phase)
+
+# 3) build envelope per-sample using samples_list (1.0 for pulse slots, 0.0 for silence)
+envelope = np.zeros(total_samples, dtype=float)
+idx = 0
+for slot_val, n_samples in zip(pattern_half, samples_list):
+    end = idx + n_samples
+    if end > total_samples:
+        end = total_samples
+    if slot_val:
+        envelope[idx:end] = 1.0
+    idx = end
+
+# 4) compose complex signal (I + jQ), preserving phase continuity
+sigout = amplitude * (carrier_i * envelope + 1j * carrier_q * envelope)
+
+print(sigout);
+
+
+
+
+
+# --- Write IQ file ---
+bits = 12
+scale = 2**(bits - 1) - 1
+gain = 0.75 # Headroom.
+scaled_i = (sigout.real * scale * gain).astype(int)
+scaled_q = (sigout.imag * scale * gain).astype(int)
+os.makedirs("tb/data/gen/", exist_ok=True)
+filename = "tb/data/gen/adsb_61_44.dat"
+with open(filename, "w") as f:
+    for i in range(len(scaled_i)):
+        f.write(f"{scaled_i[i]} {scaled_q[i]}\n")
+
+print(f"Wrote '{filename}'.")

@@ -19,3 +19,4 @@ vunit_out
 *.ghw
 *.gtkw
 *.xsa
+tb/data/gen/
