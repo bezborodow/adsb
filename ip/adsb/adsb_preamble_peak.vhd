@@ -60,8 +60,8 @@ architecture rtl of adsb_preamble_peak is
     constant K_MAX : natural := RECORD_ARRAY_LENGTH - 2;
     subtype energy_product_t is unsigned(win_energy_t'length*2-1 downto 0);
     type energy_product_array_t is array (0 to K_MAX) of energy_product_t;
-    signal lhs_r, lhs_z1 : energy_product_array_t := (others => (others => '0'));
-    signal rhs_r, rhs_z1 : energy_product_array_t := (others => (others => '0'));
+    signal lhs_r, lhs_z1, lhs_z2 : energy_product_array_t := (others => (others => '0'));
+    signal rhs_r, rhs_z1, rhs_z2 : energy_product_array_t := (others => (others => '0'));
 
     -- Is A greater than B?
     -- Centre record greater than its neighbours for each neighbour?
@@ -71,12 +71,13 @@ architecture rtl of adsb_preamble_peak is
     signal thres_ok_z1 : std_logic := '0';
     signal thres_ok_z2 : std_logic := '0';
     signal thres_ok_z3 : std_logic := '0';
+    signal thres_ok_z4 : std_logic := '0';
 
     -- Registered signals for outputs.
-    signal i_r, i_z3 : iq_t := (others => '0');
-    signal q_r, q_z3 : iq_t := (others => '0');
-    signal mag_sq_r, mag_sq_z3 : mag_sq_t := (others => '0');
-    signal max_mag_sq_r, max_mag_sq_z3 : mag_sq_t := (others => '0');
+    signal i_r, i_z3, i_z4 : iq_t := (others => '0');
+    signal q_r, q_z3, q_z4 : iq_t := (others => '0');
+    signal mag_sq_r, mag_sq_z3, mag_sq_z4 : mag_sq_t := (others => '0');
+    signal max_mag_sq_r, max_mag_sq_z3, max_mag_sq_z4 : mag_sq_t := (others => '0');
     signal detect_r : std_logic := '0';
 
     -- Check that all bits in a standard logic vector are '1'.
@@ -138,6 +139,7 @@ begin
                 thres_ok_z1 <= centre_v.thresholds_ok;
                 thres_ok_z2 <= thres_ok_z1;
                 thres_ok_z3 <= thres_ok_z2;
+                thres_ok_z4 <= thres_ok_z3;
                 for i in history_a'range loop
 
                     -- Skip centre record.
@@ -168,12 +170,14 @@ begin
                         lhs_r(k) <= eai_v * ebo_v;
                         rhs_r(k) <= ebi_v * eao_v;
 
-                        -- Register between multiply and comparison for DSP.
+                        -- Register two pipeline stages after the multiply DSP.
                         lhs_z1(k) <= lhs_r(k);
                         rhs_z1(k) <= rhs_r(k);
+                        lhs_z2(k) <= lhs_z1(k);
+                        rhs_z2(k) <= rhs_z1(k);
 
                         -- Comparison.
-                        if lhs_z1(k) > rhs_z1(k) then
+                        if lhs_z2(k) > rhs_z2(k) then
                             agtb_r(k) <= '1'; -- A is greater than B (AGTB.)
                         else
                             agtb_r(k) <= '0';
@@ -190,7 +194,7 @@ begin
                 -- If the record is greater than its neighbours and thresholds are okay.
                 -- There is two cycles of delay (z2) prior to this operation that
                 -- needs to be accounted for.
-                if all_bits_high(agtb_r) and (thres_ok_z3 = '1') then
+                if all_bits_high(agtb_r) and (thres_ok_z4 = '1') then
                     detect_r <= '1';
                 else
                     detect_r <= '0';
@@ -211,10 +215,16 @@ begin
                 max_mag_sq_z3 <= history_a(CENTRE_RECORD + DELAY_OFFSET).max_mag_sq;
 
                 -- The delay is actually more than the buffer, so need an additional register.
-                i_r          <= i_z3;
-                q_r          <= q_z3;
-                mag_sq_r     <= mag_sq_z3;
-                max_mag_sq_r <= max_mag_sq_z3;
+                i_z4          <= i_z3;
+                q_z4          <= q_z3;
+                mag_sq_z4     <= mag_sq_z3;
+                max_mag_sq_z4 <= max_mag_sq_z3;
+
+                -- Second additional delay.
+                i_r          <= i_z4;
+                q_r          <= q_z4;
+                mag_sq_r     <= mag_sq_z4;
+                max_mag_sq_r <= max_mag_sq_z4;
             end if;
         end if;
     end process delay_process;
