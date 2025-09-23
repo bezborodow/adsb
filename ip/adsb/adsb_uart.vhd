@@ -209,7 +209,12 @@ begin
 
             if srl_s_vld = '0' and timer_uart_idle = 0 then
                 mux_uart_vld <= '1';
-                mux_uart_data <= x"2E";
+                if led_r <= '1' then
+                    mux_uart_data <= x"50"; -- P
+                    led_r <= '0';
+                else
+                    mux_uart_data <= x"2E"; -- .
+                end if;
                 mux_uart_ascii <= '0';
                 mux_uart_eom <= '1';
                 mux_uart_last <= '1';
