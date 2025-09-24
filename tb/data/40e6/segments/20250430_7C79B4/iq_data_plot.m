@@ -17,6 +17,7 @@ t = (0:N-1).' / fs;
 figure;
 plot(t, real(IQ)); hold on
 plot(t, imag(IQ));
+% plot(t, abs(IQ));
 xlabel('Time (s)');
 ylabel('Amplitude');
 legend('I','Q');
