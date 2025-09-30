@@ -66,11 +66,11 @@ architecture test of ppm_demod_robust_tb is
         -- Generate random periods 6..14.
         uniform(seed1, seed2, r);
         period1 := integer(8.0 + r * (12.0 - 8.0));
-        period1 := 10;
+        --period1 := 10;
 
         uniform(seed1, seed2, r);
         period2 := integer(8.0 + r * (12.0 - 8.0));
-        period2 := 10;
+        --period2 := 10;
 
         -- Send symbols.
         input_s <= symbols(1);
@@ -135,25 +135,25 @@ begin
         if run("112bit_msb0_lead") then
             expected_data <= x"0F7C776FF80300020049B8DAC606";
             expected_w56 <= '0';
-            detect_offset <= -4;
+            detect_offset <= -2;
         end if;
 
         if run("112bit_msb0_lag") then
             expected_data <= x"0F7C776FF80300020049B8DAC606";
             expected_w56 <= '0';
-            detect_offset <= 4;
+            detect_offset <= 2;
         end if;
 
         if run("112bit_msb1_lead") then
             expected_data <= x"8D06A2B89909E8A3780807E6AEBF";
             expected_w56 <= '0';
-            detect_offset <= -4;
+            detect_offset <= -2;
         end if;
 
         if run("112bit_msb1_lag") then
             expected_data <= x"8F7C776FF80300020049B8DAC606";
             expected_w56 <= '0';
-            detect_offset <= 4;
+            detect_offset <= 2;
         end if;
 
         wait until rising_edge(clk);
@@ -167,6 +167,7 @@ begin
         
         -- Wait to get in time with the detect strobe.
         wait for clk_period * SAMPLES_PER_SYMBOL;
+        assert demod_malformed = '0' report "Should not be malformed upon startup." severity failure;
 
         -- Send the data.
         send_frame(demod_envelope);
@@ -213,7 +214,7 @@ begin
 
                 check_equal(demod_data, expected_data, "Demodulated data not as expected.");
                 check_equal(demod_w56, expected_w56, "Demodulated data frame length not as expected.");
-                assert demod_malformed = '0' report "Should not be malformed" severity failure;
+                assert demod_malformed = '0' report "Should not be malformed after successfull demodulation." severity failure;
                 done := true;
             end if;
 
