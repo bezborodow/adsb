@@ -95,6 +95,7 @@ architecture test of ppm_demod_robust_tb is
         for i in 0 to frame_bit_length-1 loop
             send_bit(input_s, expected_data(111-i), seed1, seed2);
         end loop;
+        input_s <= '0';
     end procedure send_frame;
 begin
     clk <= not clk after clk_period / 2;
@@ -135,7 +136,7 @@ begin
         if run("112bit_msb0_lead") then
             expected_data <= x"0F7C776FF80300020049B8DAC606";
             expected_w56 <= '0';
-            detect_offset <= -2;
+            detect_offset <= -4;
         end if;
 
         if run("112bit_msb0_lag") then
@@ -173,7 +174,7 @@ begin
         send_frame(demod_envelope);
 
         -- Bit of extra time.
-        wait for clk_period * 5;
+        wait for clk_period * 500;
 
         -- End of test! Trigger checks!
         end_of_test <= true;

@@ -79,43 +79,36 @@ begin
         );
 
     main : process
+        variable expected_data : std_logic_vector(111 downto 0);
+        variable expected_w56 : std_logic := '0';
     begin
         test_runner_setup(runner, runner_cfg);
 
         if run("112bit") then
             send_frame(input, detect, 112);
-            wait for clk_period * 50;
-            assert valid = '1';
-            ready <= '1';
-            wait for clk_period;
-            assert valid = '1';
-            assert data = "1001100110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011001" report "Data not as expected.";
-            assert w56 = '0';
-            assert malformed = '0';
-            ready <= '0';
-            wait for clk_period;
-            assert valid = '0';
-            assert unsigned(data) = 0;
-            assert w56 = '0';
-            wait for clk_period * 50;
+            expected_data := "1001100110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011001";
+            expected_w56 := '0';
         end if;
         if run("56bit") then
             send_frame(input, detect, 56);
-            wait for clk_period * 50;
-            assert valid = '1';
-            ready <= '1';
-            wait for clk_period;
-            assert valid = '1';
-            assert data = "0000000000000000000000000000000000000000000000000000000010011001100110011001100110011001100110011001100110011001" report "Data not as expected.";
-            assert w56 = '1';
-            assert malformed = '0';
-            ready <= '0';
-            wait for clk_period;
-            assert valid = '0';
-            assert unsigned(data) = 0;
-            assert w56 = '0';
-            wait for clk_period * 50;
+            expected_data := "0000000000000000000000000000000000000000000000000000000010011001100110011001100110011001100110011001100110011001";
+            expected_w56 := '1';
         end if;
+
+        wait for clk_period * 50;
+        assert valid = '1';
+        ready <= '1';
+        wait for clk_period;
+        assert valid = '1';
+        check_equal(w56, expected_w56, "56 bit flag not as expected.");
+        check_equal(data, expected_data, "Data not as expected.");
+        assert malformed = '0';
+        ready <= '0';
+        wait for clk_period;
+        assert valid = '0';
+        assert unsigned(data) = 0;
+        assert w56 = '0';
+        wait for clk_period * 50;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
