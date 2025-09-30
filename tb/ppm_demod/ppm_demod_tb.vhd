@@ -29,17 +29,15 @@ architecture test of ppm_demod_tb is
         frame_length : in integer
     ) is
     begin
+        -- The detect strobe should go high just before the message begins, right
+        -- at the end of the preamble. This allows the PPM demodulator to reset.
+        detect_s <= '1';
+        wait for clk_period;
+        detect_s <= '0';
+
         for i in 0 to frame_length/4 - 1 loop
             input_s <= '1';
-            if i = 0 then
-                detect_s <= '1';
-                wait for clk_period;
-                detect_s <= '0';
-                wait for clk_period * 9;
-            else
-                detect_s <= '0';
-                wait for clk_period * 10;
-            end if;
+            wait for clk_period * 10;
             input_s <= '0';
             wait for clk_period * 10;
 
