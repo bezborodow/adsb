@@ -16,7 +16,7 @@ architecture test of ppm_demod_tb is
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
 
     signal ready : std_logic := '0';
-    signal detect : std_logic := '1';
+    signal detect : std_logic := '0';
     signal input : std_logic := '0';
     signal valid : std_logic := '0';
     signal data : std_logic_vector(111 downto 0) := (others => '0');

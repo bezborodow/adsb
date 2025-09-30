@@ -5,6 +5,7 @@ from pathlib import Path
 # Create VUnit instance by parsing command line arguments
 vu = VUnit.from_argv(compile_builtins=False)
 vu.add_vhdl_builtins()
+out_path = Path(getattr(vu, "output_path", None) or getattr(vu, "_output_path", Path(".")))
 
 # Create library 'lib'
 lib = vu.add_library("lib")
@@ -35,7 +36,15 @@ for name in tb_names:
 
 # PPM Demod. Has different test cases, so need to add their own wave files.
 tb = lib.test_bench("ppm_demod_tb")
-out_path = Path(getattr(vu, "output_path", None) or getattr(vu, "_output_path", Path(".")))
+tests = tb.get_tests()
+for tc in tests:
+    # Obtain a usable testcase name (handle .name or .get_name()).
+    tc_name = getattr(tc, "name", None) or (tc.get_name() if hasattr(tc, "get_name") else str(tc))
+    wavefile = str(out_path / f"{tb.name}.{tc_name}.ghw")
+    tc.set_sim_option("ghdl.sim_flags", [f"--wave={wavefile}"])
+
+# PPM Demod Robust.
+tb = lib.test_bench("ppm_demod_robust_tb")
 tests = tb.get_tests()
 for tc in tests:
     # Obtain a usable testcase name (handle .name or .get_name()).
@@ -45,7 +54,6 @@ for tc in tests:
 
 # Same with this one.
 tb = lib.test_bench("adsb_serialiser_tb")
-out_path = Path(getattr(vu, "output_path", None) or getattr(vu, "_output_path", Path(".")))
 tests = tb.get_tests()
 for tc in tests:
     tc_name = getattr(tc, "name", None) or (tc.get_name() if hasattr(tc, "get_name") else str(tc))
