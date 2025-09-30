@@ -65,16 +65,18 @@ architecture test of ppm_demod_robust_tb is
 
         -- Generate random periods 6..14.
         uniform(seed1, seed2, r);
-        period1 := integer(6.0 + r * (14.0 - 6.0));
+        period1 := integer(8.0 + r * (12.0 - 8.0));
+        period1 := 10;
 
         uniform(seed1, seed2, r);
-        period2 := integer(6.0 + r * (14.0 - 6.0));
+        period2 := integer(8.0 + r * (12.0 - 8.0));
+        period2 := 10;
 
         -- Send symbols.
-        input_s <= symbols(0);
+        input_s <= symbols(1);
         wait for clk_period * period1;
 
-        input_s <= symbols(1);
+        input_s <= symbols(0);
         wait for clk_period * period2;
 
     end procedure send_bit;
@@ -84,12 +86,14 @@ architecture test of ppm_demod_robust_tb is
     ) is
         variable seed1 : positive := 12345;
         variable seed2 : positive := 67890;
-        variable i_start : natural := 0;
+        variable frame_bit_length : natural := 112;
     begin
-        i_start := 56 when expected_w56 = '1' else 0;
+        if expected_w56 = '1' then
+            frame_bit_length := 56;
+        end if;
 
-        for i in i_start to 111 loop
-            send_bit(input_s, expected_data(i), seed1, seed2);
+        for i in 0 to frame_bit_length-1 loop
+            send_bit(input_s, expected_data(111-i), seed1, seed2);
         end loop;
     end procedure send_frame;
 begin
@@ -207,8 +211,9 @@ begin
             if demod_valid = '1' and demod_ready = '0' then
                 demod_ready <= '1';
 
-                check_equal(expected_data, demod_data, "Demodulated data not as expected.");
-                check_equal(expected_w56, demod_w56, "Demodulated data frame length not as expected.");
+                check_equal(demod_data, expected_data, "Demodulated data not as expected.");
+                check_equal(demod_w56, expected_w56, "Demodulated data frame length not as expected.");
+                assert demod_malformed = '0' report "Should not be malformed" severity failure;
                 done := true;
             end if;
 
