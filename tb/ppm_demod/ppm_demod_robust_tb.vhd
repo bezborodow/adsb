@@ -207,6 +207,9 @@ begin
     -- This process will check that the ADS-B message is demodulated.
     verification_process : process(clk)
         -- When found the detect signal in the correct place.
+        variable demod_done : boolean := false;
+        variable ready_done : boolean := false;
+        variable valid_done : boolean := false;
         variable done : boolean := false;
     begin
         if rising_edge(clk) then
@@ -216,14 +219,21 @@ begin
                 check_equal(demod_data, expected_data, "Demodulated data not as expected.");
                 check_equal(demod_w56, expected_w56, "Demodulated data frame length not as expected.");
                 assert demod_malformed = '0' report "Should not be malformed after successfull demodulation." severity failure;
-                done := true;
+                demod_done := true;
             end if;
 
-            if demod_ready = '1' and demod_valid = '1' then
+            if demod_done and ready_done then
+                assert demod_valid = '0' report "Should not be valid after successfull handshake." severity failure;
+                valid_done := true;
+            end if;
+
+            if demod_done and demod_ready = '1' and demod_valid = '1' then
                 demod_ready <= '0';
+                ready_done := true;
             end if;
 
             --  Check done.
+            done := demod_done and ready_done and valid_done;
             if end_of_test and not done then
                 report "Did not demodulate the message." severity failure;
             end if;

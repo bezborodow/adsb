@@ -105,9 +105,8 @@ begin
         assert malformed = '0';
         ready <= '0';
         wait for clk_period;
+
         assert valid = '0';
-        assert unsigned(data) = 0;
-        assert w56 = '0';
         wait for clk_period * 50;
 
         test_runner_cleanup(runner); -- Simulation ends here

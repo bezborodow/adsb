@@ -147,7 +147,15 @@ begin
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
+                if detect_i = '1' then
+                    -- Reset.
+                    pp_index := 0;
+                end if;
+
                 if demodulating = '1' then
+
+                    -- Fill up symbols from samples whenever a sample strobe is fired
+                    -- from the timing process.
                     pp_strobe <= '0';
                     if sample_strobe = '1' then
                         pulse_position(pp_index) <= envelope_z1;
@@ -164,15 +172,6 @@ begin
     end process symbol_process;
 
     demod_process : process(clk)
-        procedure reset_procedure is
-        begin
-            malformed_r <= '0';
-            valid_r <= '0';
-            data_r <= (others => '0');
-            w56_r <= '0';
-            demodulating <= '0';
-        end procedure reset_procedure;
-
         variable bit_index : natural range 0 to 111 := 0;
     begin
         if rising_edge(clk) then
@@ -180,7 +179,13 @@ begin
 
                 -- Reset when new preamble is detected.
                 if detect_i = '1' then
-                    reset_procedure;
+                    malformed_r <= '0';
+                    valid_r <= '0';
+                    data_r <= (others => '0');
+                    w56_r <= '0';
+                    bit_index := 0;
+
+                    -- Start demodulating.
                     demodulating <= '1';
                 end if;
 
@@ -210,8 +215,9 @@ begin
                     end if;
                 end if;
 
+                -- Clear valid flag after handshake once data is transferred.
                 if valid_r = '1' and rdy_i = '1' then
-                    reset_procedure;
+                    valid_r <= '0';
                 end if;
             end if;
         end if;

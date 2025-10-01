@@ -11,7 +11,7 @@ out_path = Path(getattr(vu, "output_path", None) or getattr(vu, "_output_path", 
 lib = vu.add_library("lib")
 lib.add_source_files("ip/schmitt_trigger/*.vhd")
 lib.add_source_files("ip/adsb/*.vhd")
-lib.add_source_files("ip/freq_est/*.vhd")
+lib.add_source_files("ip/freq_est/freq_est.vhd")
 lib.add_source_files("ip/uart/*.vhd")
 lib.add_source_files("tb/*/*.vhd")
 lib.add_source_files("tb/*.vhd")
