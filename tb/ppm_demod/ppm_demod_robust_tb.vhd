@@ -26,7 +26,7 @@ architecture test of ppm_demod_robust_tb is
     -- UUT (unit under test) signals.
     signal demod_ready : std_logic := '0';
     signal demod_detect : std_logic := '0';
-    signal demod_envelope : std_logic := '0';
+    signal demod_schmitt : std_logic := '0';
     signal demod_valid : std_logic := '0';
     signal demod_data : std_logic_vector(111 downto 0) := (others => '0');
     signal demod_w56 : std_logic := '0';
@@ -108,7 +108,7 @@ begin
             clk => clk,
             ce_i => '1',
             rdy_i => demod_ready,
-            envelope_i => demod_envelope,
+            schmitt_i => demod_schmitt,
             detect_i => demod_detect,
             vld_o => demod_valid,
             data_o => demod_data,
@@ -171,7 +171,7 @@ begin
         assert demod_malformed = '0' report "Should not be malformed upon startup." severity failure;
 
         -- Send the data.
-        send_frame(demod_envelope);
+        send_frame(demod_schmitt);
 
         -- Bit of extra time.
         wait for clk_period * 500;

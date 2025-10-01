@@ -32,15 +32,16 @@ architecture rtl of adsb is
     signal d_vld_r : std_logic := '0';
 
     -- Preamble detector signals.
-    signal detect : std_logic := '0';
+    signal detector_detect : std_logic := '0';
     signal detector_high_threshold : mag_sq_t := (others => '0');
     signal detector_low_threshold : mag_sq_t := (others => '0');
     signal detector_mag_sq : mag_sq_t := (others => '0');
-    signal detector_i : iq_t := (others => '0');
-    signal detector_q : iq_t := (others => '0');
+    signal detector_i, detector_q : iq_t := (others => '0');
 
     -- Schmitt trigger signals.
-    signal trigger_envelope : std_logic := '0';
+    signal trigger_detect : std_logic := '0';
+    signal trigger_i, trigger_q : iq_t := (others => '0');
+    signal trigger_schmitt : std_logic := '0';
 
     -- Frequency estimator signals.
     signal estimator_en : std_logic := '0';
@@ -67,10 +68,10 @@ begin
             ce_i => d_vld_r,
             i_i => i_i,
             q_i => q_i,
-            detect_o => detect,
+
+            detect_o => detector_detect,
             high_threshold_o => detector_high_threshold,
             low_threshold_o => detector_low_threshold,
-
             i_o => detector_i,
             q_o => detector_q,
             mag_sq_o => detector_mag_sq
@@ -86,10 +87,17 @@ begin
         port map (
             clk => clk,
             ce_i => d_vld_r,
-            schmitt_i => detector_mag_sq,
+            i_i => detector_i,
+            q_i => detector_i,
+            mag_sq_i => detector_mag_sq,
+            detect_i => detector_detect,
             high_threshold_i => detector_high_threshold,
             low_threshold_i => detector_low_threshold,
-            schmitt_o => trigger_envelope
+
+            i_o => trigger_i,
+            q_o => trigger_q,
+            detect_o => trigger_detect,
+            schmitt_o => trigger_schmitt
         );
 
     -- PPM demodulator.
@@ -101,8 +109,9 @@ begin
             clk => clk,
             ce_i => d_vld_r,
             rdy_i => demod_rdy,
-            envelope_i => trigger_envelope,
-            detect_i => detect,
+            schmitt_i => trigger_schmitt,
+            detect_i => trigger_detect,
+
             vld_o => demod_vld,
             data_o => demod_data,
             w56_o => demod_w56,
@@ -117,11 +126,12 @@ begin
         port map (
             clk => clk,
             ce_i => d_vld_r,
-            gate_i => trigger_envelope,
-            start_i => detect,
+            i_i => trigger_i,
+            q_i => trigger_q,
+            gate_i => trigger_schmitt,
+            start_i => trigger_detect,
             stop_i => demod_vld,
-            i_i => detector_i,
-            q_i => detector_q,
+
             rdy_i => estimator_rdy,
             vld_o => estimator_vld,
             est_re_o => estimator_re,
@@ -130,7 +140,7 @@ begin
 
     d_vld_r <= d_vld_i;
     vld_o <= vld_r;
-    detect_o <= detect;
+    detect_o <= detector_detect;
     rdy_r <= rdy_i;
     vld_r <= demod_vld and estimator_vld;
     demod_rdy <= vld_r and rdy_r;

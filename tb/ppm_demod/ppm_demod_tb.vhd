@@ -70,7 +70,7 @@ begin
             clk => clk,
             ce_i => '1',
             rdy_i => ready,
-            envelope_i => input,
+            schmitt_i => input,
             detect_i => detect,
             vld_o => valid,
             data_o => data,

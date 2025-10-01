@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
+use work.adsb_pkg.all;
 library vunit_lib;
 context vunit_lib.vunit_context;
 
@@ -15,6 +16,15 @@ architecture test of schmitt_trigger_tb is
     signal magnitude_sq : unsigned(24 downto 0) := (others => '0');
     signal output : std_logic := '0';
 
+    signal i_i                   : iq_t := (others => '0');
+    signal q_i                   : iq_t := (others => '0');
+    signal mag_sq_i              : mag_sq_t := (others => '0');
+    signal detect_i              : std_logic := '0';
+
+    signal i_o                   : iq_t;
+    signal q_o                   : iq_t;
+    signal detect_o              : std_logic := '0';
+
     signal clk : std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
 
@@ -22,10 +32,17 @@ begin
     clk <= not clk after clk_period / 2;
 
     uut : entity work.schmitt_trigger port map (
-        schmitt_i => magnitude_sq,
-        schmitt_o => output,
+        i_i => i_i,
+        q_i => q_i,
+        mag_sq_i => magnitude_sq,
+        detect_i => detect_i,
         high_threshold_i => to_unsigned(500000, 25),
         low_threshold_i => to_unsigned(50000, 25),
+
+        schmitt_o => output,
+        detect_o => detect_o,
+        i_o => i_o,
+        q_o => q_o,
         ce_i => '1',
         clk => clk
     );
@@ -45,6 +62,8 @@ begin
 
             input_i := to_signed(line_i, 12);
             input_q := to_signed(line_q, 12);
+            i_i <= input_i;
+            q_i <= input_q;
             magnitude_sq <= to_unsigned(to_integer(input_i) * to_integer(input_i) + to_integer(input_q) * to_integer(input_q), magnitude_sq'length);
 
             -- TODO Implement test.

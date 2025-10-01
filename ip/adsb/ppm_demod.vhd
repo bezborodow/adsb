@@ -11,7 +11,7 @@ entity ppm_demod is
     port (
         clk : in std_logic;
         ce_i : in std_logic;
-        envelope_i : in std_logic; -- TODO rename: this is not the envelope; it is the cleaned up signal from the trigger!
+        schmitt_i : in std_logic;
         detect_i : in std_logic;
         vld_o : out std_logic;
         w56_o : out std_logic;
@@ -27,7 +27,7 @@ architecture rtl of ppm_demod is
     signal demodulating : std_logic := '0';
 
     -- Delay registers.
-    signal envelope_z1 : std_logic := '0';
+    signal schmitt_z1 : std_logic := '0';
     signal detect_z1 : std_logic := '0';
 
     -- Timing process.
@@ -73,7 +73,7 @@ begin
                 if detect_i = '1' then
                     -- Reset timer on preamble detection.
                     -- Do nothing else.
-                    -- Don't check envelope_z1 because it might not be setup correctly by the Schmitt trigger thresholds yet.
+                    -- Don't check schmitt_z1 because it might not be setup correctly by the Schmitt trigger thresholds yet.
                     edge_timer := 0;
                     startup_mode := true;
                     prev_symbol_low := false;
@@ -83,12 +83,12 @@ begin
 
                 if demodulating = '1' then
                     -- Detect rising or falling edges.
-                    if envelope_i = '1' and envelope_z1 = '0' then
+                    if schmitt_i = '1' and schmitt_z1 = '0' then
                         input_rising := '1';
                     else
                         input_rising := '0';
                     end if;
-                    if envelope_i = '0' and envelope_z1 = '1' then
+                    if schmitt_i = '0' and schmitt_z1 = '1' then
                         input_falling := '1';
                     else
                         input_falling := '0';
@@ -117,14 +117,14 @@ begin
                         if not first_strobe_sent then
                             send_strobe := true;
                         end if;
-                        if envelope_i = '1' then
+                        if schmitt_i = '1' then
                             send_strobe := true;
                         end if;
 
                         if send_strobe then
                             sample_strobe <= '1';
                             first_strobe_sent := true;
-                            if envelope_i = '0' then
+                            if schmitt_i = '0' then
                                 prev_symbol_low := true;
                             else
                                 startup_mode := false;
@@ -137,7 +137,7 @@ begin
 
                 -- Delay for the next process.
                 detect_z1 <= detect_i;
-                envelope_z1 <= envelope_i;
+                schmitt_z1 <= schmitt_i;
             end if;
         end if;
     end process timing_process;
@@ -158,7 +158,7 @@ begin
                     -- from the timing process.
                     pp_strobe <= '0';
                     if sample_strobe = '1' then
-                        pulse_position(pp_index) <= envelope_z1;
+                        pulse_position(pp_index) <= schmitt_z1;
                         if pp_index = 0 then
                             pp_index := 1;
                         else
