@@ -83,7 +83,6 @@ begin
             wait for clk_period * 150;
 
             assert srl_m_rdy_o = '1' report "Serialiser should be ready." severity failure;
-            srl_m_est_re_i <= test_est_re;
             srl_m_est_re_i <= test_est_re_2;
             srl_m_est_im_i <= test_est_im_2;
             srl_m_data_i <= test_adsb_112_2;
@@ -98,7 +97,6 @@ begin
         if run("56bit") then
             assert srl_m_rdy_o = '1' report "Serialiser should be ready." severity failure;
             srl_m_est_re_i <= test_est_re;
-            srl_m_est_re_i <= test_est_re;
             srl_m_est_im_i <= test_est_im;
             srl_m_w56_i <= '1';
             srl_m_data_i <= x"00000000000000" & test_adsb_56;
@@ -111,7 +109,6 @@ begin
             wait for clk_period * 100;
 
             assert srl_m_rdy_o = '1' report "Serialiser should be ready." severity failure;
-            srl_m_est_re_i <= test_est_re;
             srl_m_est_re_i <= test_est_re_2;
             srl_m_est_im_i <= test_est_im_2;
             srl_m_w56_i <= '1';

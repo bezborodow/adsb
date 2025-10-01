@@ -2,6 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
+use work.adsb_pkg.all;
 
 entity freq_est_uart is
     generic (
@@ -27,22 +28,22 @@ architecture rtl of freq_est_uart is
     signal q_rx_12b_r : iq_t := (others => '0');
 
     -- Frequency estimator signals.
-    signal estimator_en : std_logic := '0';
+    signal estimator_start : std_logic := '0';
     signal estimator_vld : std_logic := '0';
     signal estimator_rdy : std_logic := '0';
     signal estimator_re : signed(31 downto 0) := (others => '0');
     signal estimator_im : signed(31 downto 0) := (others => '0');
+    signal estimator_fifo_wr_data : std_logic_vector(FREQ_EST_FIFO_WIDTH-1 downto 0); -- Holds packed data for the FIFO.
+    signal estimator_enabled : std_logic := '0';
 
     -- FIFO read side signals.
-    signal fifo_rd_data  : std_logic_vector(ADSB_FIFO_WIDTH-1 downto 0);
+    signal fifo_rd_data  : std_logic_vector(FREQ_EST_FIFO_WIDTH-1 downto 0);
     signal fifo_rd_vld   : std_logic := '0';
     signal fifo_rd_rdy   : std_logic := '0';
 
     -- Combinatorial FIFO signals.
-    signal fifo_rd_adsb_c : std_logic_vector(111 downto 0);
     signal fifo_rd_re_c   : signed(31 downto 0);
     signal fifo_rd_im_c   : signed(31 downto 0);
-    signal fifo_rd_w56_c  : std_logic;
 
     -- Serialiser signals.
     signal srl_s_vld   : std_logic := '0';
@@ -59,15 +60,6 @@ architecture rtl of freq_est_uart is
 
     -- UART signals.
     signal uart_tx : std_logic := '1';
-
-    -- Serialiser signals.
-    signal mux_uart_vld   : std_logic := '0';
-    signal mux_uart_last  : std_logic := '0';                  -- Last byte indicator.
-    signal mux_uart_rdy   : std_logic;
-    signal mux_uart_data  : std_logic_vector(7 downto 0) := (others => '0');
-    signal mux_uart_ascii : std_logic := '0';                  -- Convert to ASCII.
-    signal mux_uart_eom   : std_logic := '0';                  -- End-of-message (newline.)
-
 begin
     u_freq_est : entity work.freq_est
         generic map (
@@ -76,28 +68,29 @@ begin
         port map (
             clk => clk,
             ce_i => d_vld_i,
-            gate_i => '1',
-            start_i => detect,
-            stop_i => demod_vld,
-            i_i => detector_i,
-            q_i => detector_q,
+            gate_i => '1', -- Do not gate -- measure constantly.
+            start_i => estimator_start,
+            stop_i => '0', -- Stop automatically when the accumulator is full.
+            i_i => i_rx_12b_r,
+            q_i => q_rx_12b_r,
             rdy_i => estimator_rdy,
             vld_o => estimator_vld,
             est_re_o => estimator_re,
-            est_im_o => estimator_im
+            est_im_o => estimator_im,
+            enabled_o => estimator_enabled
         );
 
-    u_adsb_fifo : entity work.adsb_fifo
+    u_freq_est_fifo : entity work.adsb_fifo
         generic map (
-            FIFO_WIDTH => ADSB_FIFO_WIDTH,
-            FIFO_DEPTH => ADSB_FIFO_DEPTH
+            FIFO_WIDTH => FREQ_EST_FIFO_WIDTH,
+            FIFO_DEPTH => FREQ_EST_FIFO_DEPTH
         )
         port map (
             clk        => clk,
             rst        => '0',
-            wr_data_i  => adsb_fifo_wr_data, -- This data is packed combinatorially for the FIFO.
-            wr_vld_i   => adsb_vld,
-            wr_rdy_o   => adsb_rdy,
+            wr_data_i  => estimator_fifo_wr_data, -- This data is packed combinatorially for the FIFO.
+            wr_vld_i   => estimator_vld,
+            wr_rdy_o   => estimator_rdy,
             rd_data_o  => fifo_rd_data,
             rd_vld_o   => fifo_rd_vld,
             rd_rdy_i   => fifo_rd_rdy
@@ -108,8 +101,6 @@ begin
             clk        => clk,
             m_vld_i    => fifo_rd_vld,
             m_rdy_o    => fifo_rd_rdy,
-            m_w56_i    => fifo_rd_w56_c,
-            m_data_i   => fifo_rd_adsb_c,
             m_est_re_i => fifo_rd_re_c,
             m_est_im_i => fifo_rd_im_c,
             s_vld_o    => srl_s_vld,
@@ -150,7 +141,7 @@ begin
     q_rx_12b_r <= resize(q_i, IQ_WIDTH);
 
     -- Combinatorial packing for FIFO write data.
-    freq_fifo_wr_data <= std_logic_vector(adsb_re) & std_logic_vector(adsb_im);
+    estimator_fifo_wr_data <= std_logic_vector(estimator_re) & std_logic_vector(estimator_im);
 
     -- Combinatorial unpacking from FIFO read data.
     fifo_rd_re_c   <= signed(fifo_rd_data(63 downto 32));
@@ -158,4 +149,15 @@ begin
 
     -- Drive outputs.
     uart_tx_o <= uart_tx;
+
+    main_process : process(clk)
+    begin
+        if rising_edge(clk) then
+            if estimator_enabled = '0' and estimator_vld = '0' then
+                estimator_start <= '1';
+            else
+                estimator_start <= '0';
+            end if;
+        end if;
+    end process main_process;
 end rtl;

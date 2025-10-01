@@ -11,8 +11,6 @@ entity freq_est_serialiser is
         -- Master (ADSB.)
         m_vld_i : in std_logic;
         m_rdy_o : out std_logic;
-        m_data_i : in std_logic_vector(111 downto 0); -- The ADS-B message.
-        m_w56_i : in std_logic; -- If high, the ADS-B message is a short 56 bit message instead of 112 bit.
         m_est_re_i : in signed(31 downto 0); -- Real phasor of frequency estimate.
         m_est_im_i : in signed(31 downto 0); -- Imaginary part of the phasor.
 

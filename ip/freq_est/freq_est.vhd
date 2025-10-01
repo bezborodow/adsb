@@ -20,7 +20,8 @@ entity freq_est is
         vld_o : out std_logic;
         rdy_i : in std_logic;
         est_re_o : out signed(31 downto 0);
-        est_im_o : out signed(31 downto 0)
+        est_im_o : out signed(31 downto 0);
+        enabled_o : out std_logic
     );
 end freq_est;
 
@@ -64,6 +65,7 @@ begin
     vld_o <= vld_r;
     est_re_o <= est_re_r;
     est_im_o <= est_im_r;
+    enabled_o <= enable;
 
     -- Delayed signals.
     delay_process : process(clk)
