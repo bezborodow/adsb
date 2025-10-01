@@ -1,6 +1,6 @@
 .PHONY: all build
 
-export PROJECT_NAME := adrv9364z7020_adsb
+export PROJECT_NAME := adrv9364z7020_freq_est
 
 # Location of the HDL reference repository from Analog Devices.
 M_DIR := $(shell pwd)
@@ -16,5 +16,5 @@ export BASE_PROJECT_XPR := $(ADI_HDL_DIR)/projects/adrv9364z7020/ccbob_lvds/adrv
 
 all: build
 
-build: $(BASE_PROJECT_XPR) adrv9364z7020_adsb.tcl
-	$(VIVADO) adrv9364z7020_adsb.tcl
+build: $(BASE_PROJECT_XPR) adrv9364z7020_freq_est.tcl
+	$(VIVADO) adrv9364z7020_freq_est.tcl
