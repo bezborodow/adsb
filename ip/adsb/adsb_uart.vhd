@@ -188,9 +188,9 @@ begin
 
     -- Combinatorial unpacking from FIFO read data.
     fifo_rd_w56_c  <= fifo_rd_data(176);
+    fifo_rd_adsb_c <= fifo_rd_data(175 downto 64);
     fifo_rd_re_c   <= signed(fifo_rd_data(63 downto 32));
     fifo_rd_im_c   <= signed(fifo_rd_data(31 downto 0));
-    fifo_rd_adsb_c <= fifo_rd_data(175 downto 64);
 
     -- Drive outputs.
     uart_tx_o <= uart_tx;

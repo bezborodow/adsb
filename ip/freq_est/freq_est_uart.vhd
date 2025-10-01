@@ -19,22 +19,19 @@ end freq_est_uart;
 
 architecture rtl of freq_est_uart is
     -- FIFO parameters.
-    constant ADSB_FIFO_WIDTH : integer := 177;
-    constant ADSB_FIFO_DEPTH : integer := 4;
+    constant FREQ_EST_FIFO_WIDTH : integer := 64;
+    constant FREQ_EST_FIFO_DEPTH : integer := 4;
 
     -- 16 bit IQ to 12 bit registers.
     signal i_rx_12b_r : iq_t := (others => '0');
     signal q_rx_12b_r : iq_t := (others => '0');
 
-    -- ADSB demodalator and frequency estimator signals.
-    signal adsb_detect       : std_logic := '0';
-    signal adsb_vld          : std_logic := '0';
-    signal adsb_rdy          : std_logic := '0';
-    signal adsb_w56          : std_logic := '0';
-    signal adsb_data         : std_logic_vector(111 downto 0) := (others => '0');
-    signal adsb_re           : signed(31 downto 0) := (others => '0');
-    signal adsb_im           : signed(31 downto 0) := (others => '0');
-    signal adsb_fifo_wr_data : std_logic_vector(ADSB_FIFO_WIDTH-1 downto 0); -- Holds packed data for the FIFO.
+    -- Frequency estimator signals.
+    signal estimator_en : std_logic := '0';
+    signal estimator_vld : std_logic := '0';
+    signal estimator_rdy : std_logic := '0';
+    signal estimator_re : signed(31 downto 0) := (others => '0');
+    signal estimator_im : signed(31 downto 0) := (others => '0');
 
     -- FIFO read side signals.
     signal fifo_rd_data  : std_logic_vector(ADSB_FIFO_WIDTH-1 downto 0);
@@ -106,7 +103,7 @@ begin
             rd_rdy_i   => fifo_rd_rdy
         );
 
-    u_adsb_serialiser : entity work.adsb_serialiser
+    u_freq_est_serialiser : entity work.freq_est_serialiser
         port map (
             clk        => clk,
             m_vld_i    => fifo_rd_vld,
@@ -117,8 +114,7 @@ begin
             m_est_im_i => fifo_rd_im_c,
             s_vld_o    => srl_s_vld,
             s_last_o   => srl_s_last,
-            --s_rdy_i    => srl_s_rdy,
-            s_rdy_i    => mux_uart_rdy,
+            s_rdy_i    => srl_s_rdy,
             s_data_o   => srl_s_data,
             s_ascii_o  => srl_s_ascii,
             s_eom_o    => srl_s_eom
@@ -127,16 +123,11 @@ begin
     u_uart_tx_enc : entity work.uart_tx_enc
         port map (
             clk => clk,
-            --m_vld_i => srl_s_vld,
-            --m_rdy_o => srl_s_rdy,
-            --m_data_i => srl_s_data,
-            --m_ascii_i => srl_s_ascii,
-            --m_eom_i => srl_s_eom,
-            m_vld_i => mux_uart_vld,
-            m_rdy_o => mux_uart_rdy,
-            m_data_i => mux_uart_data,
-            m_ascii_i => mux_uart_ascii,
-            m_eom_i => mux_uart_eom,
+            m_vld_i => srl_s_vld,
+            m_rdy_o => srl_s_rdy,
+            m_data_i => srl_s_data,
+            m_ascii_i => srl_s_ascii,
+            m_eom_i => srl_s_eom,
             s_vld_o => enc_s_vld,
             s_rdy_i => enc_s_rdy,
             s_data_o => enc_s_data
@@ -155,38 +146,16 @@ begin
         );
 
     -- Extract 12 bit IQ data from 16 bits of the receive (rx) ADC.
-    --
-    -- Documentation:
-    --
-    --     https://wiki.analog.com/resources/fpga/docs/axi_ad9361
-    --     https://ez.analog.com/fpga/f/q-a/594383/dynamic-bit-selection-ad9361
-    --     https://ez.analog.com/fpga/f/q-a/106589/how-are-the-16-bit-iq-samples-formatted-in-the-hdl-fmcomms3-zedboard
-    --
-    -- The samples are always 16 bits, regardless of the ADC/DAC data width.
-    -- That is the source or destination is intended to handle samples as 16 bits.
-    -- In the transmit direction, if the DAC data width is less than 16 bits, the
-    -- most significant bits are used. In the receive direction, if the ADC data
-    -- width is less than 16 bits, the most significant bits are sign extended.
     i_rx_12b_r <= resize(i_i, IQ_WIDTH);
     q_rx_12b_r <= resize(q_i, IQ_WIDTH);
 
     -- Combinatorial packing for FIFO write data.
-    adsb_fifo_wr_data <= adsb_w56 & adsb_data & std_logic_vector(adsb_re) & std_logic_vector(adsb_im);
+    freq_fifo_wr_data <= std_logic_vector(adsb_re) & std_logic_vector(adsb_im);
 
     -- Combinatorial unpacking from FIFO read data.
-    fifo_rd_w56_c  <= fifo_rd_data(176);
     fifo_rd_re_c   <= signed(fifo_rd_data(63 downto 32));
     fifo_rd_im_c   <= signed(fifo_rd_data(31 downto 0));
-    fifo_rd_adsb_c <= fifo_rd_data(175 downto 64);
 
     -- Drive outputs.
     uart_tx_o <= uart_tx;
-
-    main_process : process(clk)
-        subtype t_uart_idle is integer range 0 to 61_440_000;
-        variable timer_uart_idle : t_uart_idle := 0;
-    begin
-        if rising_edge(clk) then
-        end if;
-    end process main_process;
 end rtl;
