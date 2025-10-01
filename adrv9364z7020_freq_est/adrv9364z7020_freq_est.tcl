@@ -8,7 +8,9 @@ open_project $base_project_xpr
 save_project_as $project_name -force
 
 # Add in the custom IP cores.
+add_files -fileset sources_1 -norecurse ../ip/adsb/adsb_pkg.vhd
 add_files -fileset sources_1 -norecurse ../ip/freq_est/freq_est.vhd
+add_files -fileset sources_1 -norecurse ../ip/freq_est/freq_est_serialiser.vhd
 add_files -fileset sources_1 -norecurse ../ip/freq_est/freq_est_uart.vhd
 add_files -fileset sources_1 -norecurse ../ip/uart/uart_pkg.vhd
 add_files -fileset sources_1 -norecurse ../ip/uart/uart_tx.vhd
