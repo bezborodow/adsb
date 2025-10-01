@@ -6,10 +6,10 @@ use work.adsb_pkg.all;
 
 entity adsb_uart is
     generic (
-        SAMPLES_PER_SYMBOL : integer := 31;
-        PREAMBLE_BUFFER_LENGTH : integer := 496; -- TODO This should really be 492, but need to fix bounds check.
+        SAMPLES_PER_SYMBOL : integer := 30;
+        PREAMBLE_BUFFER_LENGTH : integer := 480;
         ACCUMULATION_LENGTH : integer := 4096;
-        UART_CLK_DIV : integer := 533
+        UART_CLK_DIV : integer := 521 -- 60_000_000/115200
     );
     port (
         clk : in std_logic;

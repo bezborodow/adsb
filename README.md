@@ -44,6 +44,6 @@ screen /dev/ttyUSB1 115200
 ## Setting Carrier and Sampling Frequencies
 
 ```
-iio_attr -c ad9361-phy voltage0 sampling_frequency 61440000
+iio_attr -c ad9361-phy voltage0 sampling_frequency 60000000
 iio_attr -c ad9361-phy altvoltage0 frequency 1091000000
 ```

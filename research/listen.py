@@ -22,11 +22,11 @@ subprocess.run(["iio_attr", "-c", "ad9361-phy", "altvoltage1",
                 "frequency", carrier])
 
 subprocess.run(["iio_attr", "-c", "ad9361-phy", "voltage0",
-                "sampling_frequency", "61440000"])
+                "sampling_frequency", "60000000"])
 subprocess.run(["iio_attr", "-c", "ad9361-phy", "voltage2",
-                "sampling_frequency", "61440000"])
+                "sampling_frequency", "60000000"])
 subprocess.run(["iio_attr", "-c", "ad9361-phy", "voltage3",
-                "sampling_frequency", "61440000"])
+                "sampling_frequency", "60000000"])
 
 
 print("Listening on /dev/ttyPS1... (Ctrl+C to stop)")
