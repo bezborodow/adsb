@@ -13,9 +13,9 @@ entity schmitt_trigger is
         ce_i : in std_logic;
         i_i : in iq_t;
         q_i : in iq_t;
-        mag_sq_i : in unsigned(SIGNAL_WIDTH-1 downto 0) := (others => '0');
-        high_threshold_i : in unsigned(SIGNAL_WIDTH-1 downto 0) := (others => '0');
-        low_threshold_i : in unsigned(SIGNAL_WIDTH-1 downto 0) := (others => '0');
+        mag_sq_i : in unsigned(SIGNAL_WIDTH-1 downto 0);
+        high_threshold_i : in unsigned(SIGNAL_WIDTH-1 downto 0);
+        low_threshold_i : in unsigned(SIGNAL_WIDTH-1 downto 0);
         detect_i : in std_logic;
 
         i_o : out iq_t;
