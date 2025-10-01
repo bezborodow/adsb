@@ -8,11 +8,11 @@ entity adsb_envelope is
     port (
         clk : in std_logic;
         ce_i : in std_logic; -- Clock enable.
-        i_i : in signed(IQ_WIDTH-1 downto 0);
-        q_i : in signed(IQ_WIDTH-1 downto 0);
-        mag_sq_o : out unsigned(IQ_MAG_SQ_WIDTH-1 downto 0);
-        i_o : out signed(IQ_WIDTH-1 downto 0);
-        q_o : out signed(IQ_WIDTH-1 downto 0)
+        i_i : in iq_t;
+        q_i : in iq_t;
+        mag_sq_o : out mag_sq_t;
+        i_o : out iq_t;
+        q_o : out iq_t
     );
 end adsb_envelope;
 
