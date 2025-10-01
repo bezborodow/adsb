@@ -63,9 +63,10 @@ begin
         variable edge_timer : natural range 0 to EDGE_TIMER_MAX := 0;
         
         -- To detect the first symbol, allow slack of two samples to be low.
-        --variable startup_mode : boolean := false;
-        --variable last_symbol_low : boolean := false;
-        --variable first_strobe_sent : boolean := false;
+        variable startup_mode : boolean := false;
+        variable prev_symbol_low : boolean := false;
+        variable first_strobe_sent : boolean := false;
+        variable send_strobe : boolean := false;
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
@@ -74,9 +75,10 @@ begin
                     -- Do nothing else.
                     -- Don't check envelope_z1 because it might not be setup correctly by the Schmitt trigger thresholds yet.
                     edge_timer := 0;
-                    --startup_mode := true;
-                    --last_symbol_low := false;
-                    --first_strobe_sent := false;
+                    startup_mode := true;
+                    prev_symbol_low := false;
+                    first_strobe_sent := false;
+                    send_strobe := false;
                 end if;
 
                 if demodulating = '1' then
@@ -101,7 +103,33 @@ begin
 
                     -- Sample when halfway through the timer.
                     if edge_timer = HALF_SPS-1 then
-                        sample_strobe <= '1';
+
+                        -- This next section basically just sets the sample_strobe, but
+                        -- has extra logic to allow the first two samples to be low during
+                        -- startup. This allows the preamble to be slightly out of time.
+                        send_strobe := false;
+                        if not startup_mode then
+                            send_strobe := true;
+                        end if;
+                        if not prev_symbol_low then
+                            send_strobe := true;
+                        end if;
+                        if not first_strobe_sent then
+                            send_strobe := true;
+                        end if;
+                        if envelope_i = '1' then
+                            send_strobe := true;
+                        end if;
+
+                        if send_strobe then
+                            sample_strobe <= '1';
+                            first_strobe_sent := true;
+                            if envelope_i = '0' then
+                                prev_symbol_low := true;
+                            else
+                                startup_mode := false;
+                            end if;
+                        end if;
                     else
                         sample_strobe <= '0';
                     end if;
