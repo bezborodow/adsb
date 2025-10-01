@@ -84,30 +84,35 @@ begin
     begin
         test_runner_setup(runner, runner_cfg);
 
-        if run("112bit") then
-            send_frame(input, detect, 112);
-            expected_data := "1001100110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011001";
-            expected_w56 := '0';
-        end if;
-        if run("56bit") then
-            send_frame(input, detect, 56);
-            expected_data := "0000000000000000000000000000000000000000000000000000000010011001100110011001100110011001100110011001100110011001";
-            expected_w56 := '1';
-        end if;
+        -- Run the test twice to ensure it resets correctly between frames.
+        for i in 0 to 1 loop
 
-        wait for clk_period * 50;
-        assert valid = '1';
-        ready <= '1';
-        wait for clk_period;
-        assert valid = '1';
-        check_equal(w56, expected_w56, "56 bit flag not as expected.");
-        check_equal(data, expected_data, "Data not as expected.");
-        assert malformed = '0';
-        ready <= '0';
-        wait for clk_period;
+            if run("112bit") then
+                send_frame(input, detect, 112);
+                expected_data := "1001100110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011001100110011001";
+                expected_w56 := '0';
+            end if;
+            if run("56bit") then
+                send_frame(input, detect, 56);
+                expected_data := "0000000000000000000000000000000000000000000000000000000010011001100110011001100110011001100110011001100110011001";
+                expected_w56 := '1';
+            end if;
 
-        assert valid = '0';
-        wait for clk_period * 50;
+            wait for clk_period * 50;
+            assert valid = '1';
+            ready <= '1';
+            wait for clk_period;
+
+            assert valid = '1';
+            check_equal(w56, expected_w56, "56 bit flag not as expected.");
+            check_equal(data, expected_data, "Data not as expected.");
+            assert malformed = '0';
+            ready <= '0';
+            wait for clk_period;
+
+            assert valid = '0';
+            wait for clk_period * 50;
+        end loop;
 
         test_runner_cleanup(runner); -- Simulation ends here
         wait;
