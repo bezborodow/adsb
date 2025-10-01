@@ -125,9 +125,12 @@ connect_bd_net [get_bd_pins xlslice_1/Din] [get_bd_pins fir_compiler_0/m_axis_da
 # RTL: ADS-B processing component.
 create_bd_cell -type module -reference adsb_uart u_adsb_uart
 connect_bd_net [get_bd_pins util_ad9361_adc_fifo/dout_clk] [get_bd_pins u_adsb_uart/clk]
-connect_bd_net [get_bd_pins fir_compiler_0/m_axis_data_tvalid] [get_bd_pins u_adsb_uart/d_vld_i]
-connect_bd_net [get_bd_pins xlslice_0/Dout] [get_bd_pins u_adsb_uart/i_i]
-connect_bd_net [get_bd_pins xlslice_1/Dout] [get_bd_pins u_adsb_uart/q_i]
+#connect_bd_net [get_bd_pins fir_compiler_0/m_axis_data_tvalid] [get_bd_pins u_adsb_uart/d_vld_i]
+#connect_bd_net [get_bd_pins xlslice_0/Dout] [get_bd_pins u_adsb_uart/i_i]
+#connect_bd_net [get_bd_pins xlslice_1/Dout] [get_bd_pins u_adsb_uart/q_i]
+connect_bd_net [get_bd_pins util_ad9361_adc_fifo/dout_valid_0] [get_bd_pins u_adsb_uart/d_vld_i]
+connect_bd_net [get_bd_pins util_ad9361_adc_fifo/dout_data_0] [get_bd_pins u_adsb_uart/i_i]
+connect_bd_net [get_bd_pins util_ad9361_adc_fifo/dout_data_1] [get_bd_pins u_adsb_uart/q_i]
 
 # Enable UART0.
 set_property -dict [list \
