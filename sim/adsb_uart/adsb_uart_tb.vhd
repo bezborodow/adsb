@@ -29,7 +29,7 @@ begin
         );
 
     main : process
-        file iq_file : text open read_mode is "tb/data/gen/adsb_61_440_000_hertz.dat";
+        file iq_file : text open read_mode is "adsb_61_440_000_hertz.dat";
         variable line_buf : line;
         variable line_i, line_q : integer;
     begin

@@ -153,9 +153,12 @@ add_files -fileset sim_1 -norecurse ../sim/adsb_uart/adsb_uart_tb.vhd
 set_property top adsb_uart_tb [get_filesets sim_1]
 add_files -fileset sim_1 -norecurse $data_file
 set_property used_in_simulation true [get_files $data_file]
+set_property used_in_synthesis false [get_files $data_file]
+import_files -force -norecurse
 
 # Save board design.
 update_compile_order -fileset sources_1
+update_compile_order -fileset sim_1
 validate_bd_design
 save_bd_design
 set project_name $::env(PROJECT_NAME)
