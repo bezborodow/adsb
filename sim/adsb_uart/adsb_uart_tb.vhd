@@ -5,8 +5,6 @@ use std.textio.all;
 use work.adsb_pkg.all;
 
 entity adsb_uart_tb is
---  port ( );
-    generic (runner_cfg : string);
 end adsb_uart_tb;
 
 architecture test of adsb_uart_tb is
