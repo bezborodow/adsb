@@ -139,6 +139,14 @@ set_property -dict [list \
 ] [get_bd_cells sys_ps7]
 connect_bd_net [get_bd_pins u_adsb_uart/uart_tx_o] [get_bd_pins sys_ps7/UART0_RX]
 
+# Add simulation sources.
+add_files -norecurse ../sim/adsb_uart/adsb_uart_tb.vhd -simset sim_1
+set_property top adsb_uart_tb [get_filesets sim_1]
+add_files -fileset sim_1 ../tb/data/gen/adsb_61_440_000_hertz.dat
+set_property file_type {Text Data Files} [get_files ../tb/data/gen/adsb_61_440_000_hertz.dat]
+
+# Save board design.
 update_compile_order -fileset sources_1
 validate_bd_design
 save_bd_design
+save_project

@@ -47,3 +47,10 @@ screen /dev/ttyUSB1 115200
 iio_attr -c ad9361-phy voltage0 sampling_frequency 60000000
 iio_attr -c ad9361-phy altvoltage0 frequency 1091000000
 ```
+
+## Running Vunit Testbenches
+
+```
+./generate_vunit_data
+./vunit
+```
