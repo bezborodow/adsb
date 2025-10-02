@@ -39,7 +39,7 @@ begin
         );
 
     main : process
-        file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
+        file iq_file : text open read_mode is "tb/data/20e6/synth/iq_data.txt";
         variable line_buf : line;
         variable line_i, line_q : integer;
     begin
@@ -57,7 +57,7 @@ begin
 
         -- Close and reopen the file.
         file_close(iq_file);
-        file_open(iq_file, "tb/schmitt_trigger/iq_data.txt", read_mode);
+        file_open(iq_file, "tb/data/20e6/synth/iq_data.txt", read_mode);
 
         -- Second pass to check that consecutive messages can be received.
         while not endfile(iq_file) loop

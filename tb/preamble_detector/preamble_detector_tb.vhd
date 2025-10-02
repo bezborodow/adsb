@@ -55,7 +55,7 @@ begin
         );
 
     stimulus_process : process
-        file iq_file : text open read_mode is "tb/schmitt_trigger/iq_data.txt";
+        file iq_file : text open read_mode is "tb/data/20e6/synth/iq_data.txt";
         variable line_buf : line;
         variable line_i, line_q : integer;
     begin
