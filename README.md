@@ -54,3 +54,29 @@ iio_attr -c ad9361-phy altvoltage0 frequency 1091000000
 ./generate_vunit_data
 ./vunit
 ```
+
+## Connecting to the SDR over Ethernet.
+
+On the SDR (over UART):
+
+```
+ip addr add 192.168.2.2/24 dev eth0
+ip link set eth0 up
+ip addr show eth0
+```
+
+On the PC host, plug in the cable, then:
+
+```
+dmesg -w
+```
+
+Ensure the correct adapter name is used. For example, if it is `enp2s0` then:
+
+```
+sudo ip addr add 192.168.2.1/24 dev enp2s0
+sudo ip link set enp2s0 up
+ip addr show enp2s0
+ping 192.168.2.2
+ssh root@192.168.2.2
+```
