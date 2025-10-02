@@ -63,6 +63,8 @@ On the SDR (over UART):
 ip addr add 192.168.2.2/24 dev eth0
 ip link set eth0 up
 ip addr show eth0
+ip route add default via 192.168.2.1
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
 ```
 
 On the PC host, plug in the cable, then:
@@ -78,5 +80,20 @@ sudo ip addr add 192.168.2.1/24 dev enp2s0
 sudo ip link set enp2s0 up
 ip addr show enp2s0
 ping 192.168.2.2
+ssh-copy-id root@192.168.2.2
 ssh root@192.168.2.2
+```
+
+Check what is your default route:
+
+```
+ip route | grep default
+```
+
+If it is wlp5s0, then:
+
+```
+sudo iptables -t nat -A POSTROUTING -o wlp5s0 -j MASQUERADE
+sudo iptables -A FORWARD -i wlp5s0 -o enp2s0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+sudo iptables -A FORWARD -i enp2s0 -o wlp5s0 -j ACCEPT
 ```
