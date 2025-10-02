@@ -139,14 +139,23 @@ set_property -dict [list \
 ] [get_bd_cells sys_ps7]
 connect_bd_net [get_bd_pins u_adsb_uart/uart_tx_o] [get_bd_pins sys_ps7/UART0_RX]
 
+# Check if simulation data file exists.
+set data_file "../tb/data/gen/adsb_61_440_000_hertz.dat"
+if {![file exists $data_file]} {
+    puts "Data file not found. Running generator..."
+    exec ../generate_vunit_data
+} else {
+    puts "Data file exists: $data_file"
+}
+
 # Add simulation sources.
-add_files -norecurse ../sim/adsb_uart/adsb_uart_tb.vhd -simset sim_1
+add_files -fileset sim_1 -norecurse ../sim/adsb_uart/adsb_uart_tb.vhd
 set_property top adsb_uart_tb [get_filesets sim_1]
-add_files -fileset sim_1 ../tb/data/gen/adsb_61_440_000_hertz.dat
-set_property file_type {Text Data Files} [get_files ../tb/data/gen/adsb_61_440_000_hertz.dat]
+add_files -fileset sim_1 -norecurse $data_file
+set_property used_in_simulation true [get_files $data_file]
 
 # Save board design.
 update_compile_order -fileset sources_1
 validate_bd_design
 save_bd_design
-save_project
+set project_name $::env(PROJECT_NAME)

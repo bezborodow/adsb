@@ -21,3 +21,5 @@ vunit_out
 *.xsa
 tb/data/gen/
 __pycache__/
+/adrv9364z7020_adsb/tb/
+adrv9364z7020_adsb/adrv9364z7020_adsb.sim/

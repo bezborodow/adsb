@@ -35,7 +35,6 @@ begin
         variable line_buf : line;
         variable line_i, line_q : integer;
     begin
-        test_runner_setup(runner, runner_cfg);
         while not endfile(iq_file) loop
             readline(iq_file, line_buf);
             read(line_buf, line_i);

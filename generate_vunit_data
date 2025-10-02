@@ -2,6 +2,10 @@
 import numpy as np
 import os
 
+# Get the directory of this script.
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_dir)
+
 fs = 61.44e6 # Sample rate.
 fc = 5e6 # Carrier.
 T = 1/fs
