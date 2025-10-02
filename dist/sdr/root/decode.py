@@ -7,11 +7,7 @@ import pyModeS as ms
 import numpy as np
 
 
-def setup_iio(sampling_frequency, frequency)
-    carrier = "1087000000"
-    carrier = "1095000000"
-    carrier = "1085000000"
-
+def setup_iio(sampling_frequency, frequency):
     subprocess.run(["iio_attr", "-c", "ad9361-phy", "altvoltage0",
                     "frequency", str(int(frequency))])
     subprocess.run(["iio_attr", "-c", "ad9361-phy", "altvoltage1",
@@ -25,7 +21,7 @@ def setup_iio(sampling_frequency, frequency)
                     "sampling_frequency", str(int(sampling_frequency))])
 
 
-def read_tty(sampling_frequency, frequency)
+def read_tty(sampling_frequency, frequency):
     fd = os.open("/dev/ttyPS1", os.O_RDONLY | os.O_NONBLOCK)
 
     attrs = termios.tcgetattr(fd)
@@ -72,7 +68,7 @@ def main(frequency, sampling_frequency):
     read_tty(frequency, sampling_frequency);
 
 
-def adsb_decode(line, frequency, sampling_frequency)
+def adsb_decode(line, frequency, sampling_frequency):
     fc = frequency
     fs = sampling_frequency
 
@@ -84,7 +80,8 @@ def adsb_decode(line, frequency, sampling_frequency)
     # ADS-B is DF 17 or DF 18
     if not ms.df(msg) in [17, 18]:
         print('Not an ADS-B message.')
-        continue
+        print()
+        return
 
     # Frequency estimation.
     iq = np.frombuffer(bytes.fromhex(line[-16:]), dtype='>i4')
