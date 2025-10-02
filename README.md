@@ -19,7 +19,7 @@ Get ELF from `bootgen_sysfiles.tgz` on BOOT partition of Kuiper Linux.
 The file `u-boot_zynq_adrv9361.elf` is in the tar archive.
 
 After generating the bitstream, do File -> Export -> Export Hardware.
-This will export the `system_top.xsa`.
+This will export the `system_top.xsa`. Be sure to check 'Include Bitstream'.
 
 Under wiki-scripts:
 
@@ -64,7 +64,6 @@ ip addr add 192.168.2.2/24 dev eth0
 ip link set eth0 up
 ip addr show eth0
 ip route add default via 192.168.2.1
-echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
 ```
 
 On the PC host, plug in the cable, then:
