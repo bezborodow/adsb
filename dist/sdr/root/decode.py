@@ -88,7 +88,8 @@ def adsb_decode(line, frequency, sampling_frequency):
     S_hat = float(iq[0]) + 1j*float(iq[1])
     phi_hat = np.angle(S_hat)
     f_hat = fs/2/np.pi*phi_hat
-    print(f"Frequency estimation: {f_hat} Hz")
+    f_est = int(f_hat + fc)
+    print(f"Frequency estimation: {f_est} Hz")
 
     tc = ms.adsb.typecode(msg)
     print(f'Type Code: {tc}')
