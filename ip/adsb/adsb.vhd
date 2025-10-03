@@ -88,7 +88,7 @@ begin
             clk => clk,
             ce_i => d_vld_r,
             i_i => detector_i,
-            q_i => detector_i,
+            q_i => detector_q,
             mag_sq_i => detector_mag_sq,
             detect_i => detector_detect,
             high_threshold_i => detector_high_threshold,

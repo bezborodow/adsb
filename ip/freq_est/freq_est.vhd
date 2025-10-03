@@ -117,7 +117,7 @@ begin
                     ph_re0 <= i_z0 * i_z1;
                     ph_re1 <= q_z0 * q_z1;
                     ph_im0 <= q_z0 * i_z1;
-                    ph_im1 <= i_z0 * q_z1;
+                    ph_im1 <= -i_z0 * q_z1;
                     enable_z1 <= '1';
                 else
                     ph_re0 <= (others => '0');
@@ -137,7 +137,7 @@ begin
                 -- Stage 4: Addition.
                 if enable_z2 = '1' then
                     phasor_re <= resize(ph_re0_z1 + ph_re1_z1, phasor_re'length);
-                    phasor_im <= resize(ph_im0_z1 - ph_im1_z1, phasor_im'length);
+                    phasor_im <= resize(ph_im0_z1 + ph_im1_z1, phasor_im'length);
                 else
                     phasor_re <= (others => '0');
                     phasor_im <= (others => '0');
