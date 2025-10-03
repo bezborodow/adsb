@@ -7,7 +7,7 @@ import pyModeS as ms
 import numpy as np
 
 
-def setup_iio(sampling_frequency, frequency):
+def setup_iio(frequency, sampling_frequency):
     subprocess.run(["iio_attr", "-c", "ad9361-phy", "altvoltage0",
                     "frequency", str(int(frequency))])
     subprocess.run(["iio_attr", "-c", "ad9361-phy", "altvoltage1",
@@ -21,7 +21,7 @@ def setup_iio(sampling_frequency, frequency):
                     "sampling_frequency", str(int(sampling_frequency))])
 
 
-def read_tty(sampling_frequency, frequency):
+def read_tty(frequency, sampling_frequency):
     fd = os.open("/dev/ttyPS1", os.O_RDONLY | os.O_NONBLOCK)
 
     attrs = termios.tcgetattr(fd)
