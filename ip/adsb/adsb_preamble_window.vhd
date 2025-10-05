@@ -310,18 +310,14 @@ begin
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
-                if stage5_win_inside_energy_r > stage5_win_outside_energy_r then
-                    all_thresholds_ok_v := '1';
-                else
-                    all_thresholds_ok_v := '0';
-                end if;
+                all_thresholds_ok_v := '1';
+                total_energy_v := stage5_win_total_energy_r;
 
                 -- The threshold applies to all four preamble high symbols.
                 -- The threshold is relative to total energy in the preamble buffer.
                 -- Threshold should be slightly less than 1/4 of total energy to trigger a detection.
                 -- Therefore, use multiplication followed by shift right by 4 to achieve 3/16.
                 -- The threshold ensures that each high symbol is getting roughly equal amounts of energy spread across it.
-                total_energy_v := stage5_win_total_energy_r;
                 threshold_v := resize((total_energy_v * to_unsigned(3, total_energy_v'length+2)) srl 4, total_energy_v'length);
                 for i in PREAMBLE_POSITION'range loop
                     symhigh_energy_v(i) := stage5_symbol_energy_a_r(PREAMBLE_POSITION(i));
