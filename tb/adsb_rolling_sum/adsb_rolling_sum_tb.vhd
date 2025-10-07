@@ -25,6 +25,12 @@ architecture test of adsb_rolling_sum_tb is
     signal incoming_i            : mag_sq_t := (others => '0');
     signal outgoing_i            : mag_sq_t := (others => '0');
     signal sum_o                 : unsigned(SUM_WIDTH-1 downto 0) := (others => '0');
+
+    -- Test signals.
+    signal incoming_z0           : mag_sq_t := (others => '0');
+    signal incoming_z1           : mag_sq_t := (others => '0');
+    signal incoming_z2           : mag_sq_t := (others => '0');
+    signal incoming_z3           : mag_sq_t := (others => '0');
 begin
     clk <= not clk after clk_period / 2;
 
@@ -45,6 +51,7 @@ begin
         type primes_t is array(0 to 20) of integer;
         constant primes : primes_t := (0, 0, 0, 0, 0, 0, 0, 2, 3, 5, 7, 11, 13, 17, 0, 0, 0, 0, 0, 0, 0);
         variable buf_idx : integer := 0;
+        variable expected_sum_v : unsigned(SUM_WIDTH-1 downto 0);
     begin
         test_runner_setup(runner, runner_cfg);
 
@@ -68,6 +75,18 @@ begin
             -- present values to UUT on next rising edge
             wait until rising_edge(clk);
             buf_idx := buf_idx + 1;
+
+            -- Check expected sum.
+            expected_sum_v := resize(unsigned(incoming_z0), SUM_WIDTH)
+                            + resize(unsigned(incoming_z1), SUM_WIDTH)
+                            + resize(unsigned(incoming_z2), SUM_WIDTH)
+                            + resize(unsigned(incoming_z3), SUM_WIDTH);
+            check_equal(sum_o, expected_sum_v, "Mismatched summation.");
+
+            incoming_z0 <= incoming_i;
+            incoming_z1 <= incoming_z0;
+            incoming_z2 <= incoming_z1;
+            incoming_z3 <= incoming_z2;
         end loop;
 
         -- Finish simulation.
