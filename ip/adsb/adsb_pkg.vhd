@@ -1,6 +1,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.math_real.ceil;
+use ieee.math_real.log2;
 
 package adsb_pkg is
     -- IQ subtypes.
@@ -27,6 +29,11 @@ package adsb_pkg is
     -- IQ width that comes from the ADC.
     -- This is different from IQ_WIDTH used internally.
     constant ADC_RX_IQ_WIDTH : positive := 16;
+
+
+    -- Pass in to generics to define the width of an acummulator signal based on the width
+    -- of the signal being accumulated and the buffer length.
+    function gen_sum_width(input_width : integer; buf_length : integer) return integer;
 
     --------------------------------------------------------------------------
     -- shrink_right
@@ -57,6 +64,11 @@ package adsb_pkg is
 end package adsb_pkg;
 
 package body adsb_pkg is
+    function gen_sum_width(input_width : integer; buf_length : integer) return integer is
+    begin
+        return input_width + integer(ceil(log2(real(buf_length))));
+    end function;
+
     function shrink_right(arg : unsigned; target_len : natural) return unsigned is
     begin
         return resize(shift_right(arg, arg'length - target_len), target_len);

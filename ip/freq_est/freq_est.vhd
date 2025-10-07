@@ -1,7 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.math_real.all;
 use work.adsb_pkg.all;
 
 -- Frequency Estimator
@@ -26,7 +25,7 @@ entity freq_est is
 end freq_est;
 
 architecture rtl of freq_est is
-    constant ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(ACCUMULATION_LENGTH))));
+    constant ACCUMULATOR_WIDTH : positive := gen_sum_width(IQ_WIDTH*2+1, ACCUMULATION_LENGTH);
 
     -- Phasor subtypes.
     constant PHASOR_WIDTH : positive := IQ_WIDTH * 2 + 1;
@@ -50,7 +49,7 @@ architecture rtl of freq_est is
     -- Phasor accumulator.
     signal accumulator_re : signed(ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
     signal accumulator_im : signed(ACCUMULATOR_WIDTH-1 downto 0) := (others => '0');
-    signal accumulation_count, ac_z1, ac_z2 : unsigned(integer(ceil(log2(real(ACCUMULATION_LENGTH))))-1 downto 0) := (others => '0');
+    signal accumulation_count : integer range 0 to ACCUMULATION_LENGTH-1 := 0;
 
     -- Enable flag, and delayed enabled flag for pipeline.
     signal enable, enable_z1, enable_z2, enable_z3 : std_logic := '0';
@@ -91,7 +90,7 @@ begin
         begin
             accumulator_re <= (others => '0');
             accumulator_im <= (others => '0');
-            accumulation_count <= (others => '0');
+            accumulation_count <= 0;
             enable <= '0';
             enable_z1 <= '0';
             enable_z2 <= '0';
@@ -110,7 +109,7 @@ begin
                 end if;
 
                 -- Check if accumulation count is less than the accumulation length.
-                accumulator_full := to_integer(accumulation_count) = ACCUMULATION_LENGTH - 1;
+                accumulator_full := accumulation_count = ACCUMULATION_LENGTH - 1;
 
                 -- Stage 1: Multiplication.
                 if (gate_i = '1') and (gate_z1 = '1') and (enable = '1') and not accumulator_full then
