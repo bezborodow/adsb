@@ -48,6 +48,7 @@ architecture rtl of adsb_preamble_window is
     -- preamble and is used for preamble detection.
     -- The IQ buffer is for timing and is as long as the number of delay clock
     -- cycles of this component.
+    -- TODO Remove this. Move to tapped buffer.
     subtype mag_sq_buffer_index_t is natural range 0 to PREAMBLE_BUFFER_LENGTH-1;
     signal mag_sq_buf_shift_reg : mag_sq_buffer_t(0 to PREAMBLE_BUFFER_LENGTH-1) := (others => (others => '0'));
 
