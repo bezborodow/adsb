@@ -26,8 +26,8 @@ begin
     -- Drive output registers.
     sum_o <= sum_r;
 
-    -- Circular buffer and rolling sum.
-    rolling_buffer_process : process(clk)
+    -- Rolling sum.
+    rolling_sum_process : process(clk)
         variable incoming_v : unsigned(SUM_WIDTH-1 downto 0);
         variable outgoing_v : unsigned(SUM_WIDTH-1 downto 0);
     begin
@@ -40,5 +40,5 @@ begin
                 sum_r <= sum_r + incoming_v - outgoing_v;
             end if;
         end if;
-    end process rolling_buffer_process;
+    end process rolling_sum_process;
 end rtl;
