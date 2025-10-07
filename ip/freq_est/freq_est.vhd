@@ -134,7 +134,7 @@ begin
                 enable_z2 <= enable_z1;
 
                 -- Stage 4: Addition.
-                if enable_z2 = '1' then
+                if enable_z2 = '1' and not accumulator_full then
                     phasor_re <= resize(ph_re0_z1 + ph_re1_z1, phasor_re'length);
                     phasor_im <= resize(ph_im0_z1 + ph_im1_z1, phasor_im'length);
                 else
@@ -144,7 +144,7 @@ begin
                 enable_z3 <= enable_z2;
 
                 -- Stage 5: Accumulate the phasors.
-                if enable_z3 = '1' then
+                if enable_z3 = '1' and not accumulator_full then
                     accumulator_re <= accumulator_re + resize(phasor_re, accumulator_re'length);
                     accumulator_im <= accumulator_im + resize(phasor_im, accumulator_im'length);
                     accumulation_count <= accumulation_count + 1;

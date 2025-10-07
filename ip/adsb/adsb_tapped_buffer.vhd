@@ -7,6 +7,7 @@ use work.adsb_pkg.all;
 entity adsb_tapped_buffer is
     generic (
         PREAMBLE_BUFFER_LENGTH : integer;
+        TAP_PIPELINE_DELAY     : integer;
         TAP_ET_A_POS           : integer;
         TAP_ET_B_POS           : integer;
         TAP_EW0_A_POS          : integer;
@@ -17,16 +18,16 @@ entity adsb_tapped_buffer is
         TAP_EW2_B_POS          : integer;
         TAP_EW3_A_POS          : integer;
         TAP_EW3_B_POS          : integer;
-        TAP_EC_A_POS           : integer;
-        TAP_EC_B_POS           : integer;
-        TAP_ENF0_A_POS         : integer;
-        TAP_ENF0_B_POS         : integer;
-        TAP_ENF1_A_POS         : integer;
-        TAP_ENF1_B_POS         : integer;
-        TAP_ENF2_A_POS         : integer;
-        TAP_ENF2_B_POS         : integer;
-        TAP_ENF3_A_POS         : integer;
-        TAP_ENF3_B_POS         : integer
+        TAP_ENF_A_POS          : integer;
+        TAP_ENF_B_POS          : integer;
+        TAP_EC0_A_POS          : integer;
+        TAP_EC0_B_POS          : integer;
+        TAP_EC1_A_POS          : integer;
+        TAP_EC1_B_POS          : integer;
+        TAP_EC2_A_POS          : integer;
+        TAP_EC2_B_POS          : integer;
+        TAP_EC3_A_POS          : integer;
+        TAP_EC3_B_POS          : integer
     );
     port (
         clk        : in  std_logic;
@@ -34,6 +35,7 @@ entity adsb_tapped_buffer is
         mag_sq_i   : in  mag_sq_t;
 
         -- Taps.
+        tap_delay_o   : out mag_sq_t;
         tap_et_a_o    : out mag_sq_t;
         tap_et_b_o    : out mag_sq_t;
         tap_ew0_a_o   : out mag_sq_t;
@@ -44,25 +46,28 @@ entity adsb_tapped_buffer is
         tap_ew2_b_o   : out mag_sq_t;
         tap_ew3_a_o   : out mag_sq_t;
         tap_ew3_b_o   : out mag_sq_t;
-        tap_ec_a_o    : out mag_sq_t;
-        tap_ec_b_o    : out mag_sq_t;
-        tap_enf0_a_o  : out mag_sq_t;
-        tap_enf0_b_o  : out mag_sq_t;
-        tap_enf1_a_o  : out mag_sq_t;
-        tap_enf1_b_o  : out mag_sq_t;
-        tap_enf2_a_o  : out mag_sq_t;
-        tap_enf2_b_o  : out mag_sq_t;
-        tap_enf3_a_o  : out mag_sq_t;
-        tap_enf3_b_o  : out mag_sq_t
+        tap_enf_a_o   : out mag_sq_t;
+        tap_enf_b_o   : out mag_sq_t;
+        tap_ec0_a_o   : out mag_sq_t;
+        tap_ec0_b_o   : out mag_sq_t;
+        tap_ec1_a_o   : out mag_sq_t;
+        tap_ec1_b_o   : out mag_sq_t;
+        tap_ec2_a_o   : out mag_sq_t;
+        tap_ec2_b_o   : out mag_sq_t;
+        tap_ec3_a_o   : out mag_sq_t;
+        tap_ec3_b_o   : out mag_sq_t
     );
 end adsb_tapped_buffer;
 
 architecture rtl of adsb_tapped_buffer is
-    -- Buffer.
+    -- Preamble buffer.
+    -- Buffer length is as long as the number of samples in the
+    -- preamble and is used for preamble detection.
     subtype mag_sq_buffer_index_t is natural range 0 to PREAMBLE_BUFFER_LENGTH-1;
     signal mag_sq_buf_shift_reg : mag_sq_buffer_t(0 to PREAMBLE_BUFFER_LENGTH-1) := (others => (others => '0'));
 
     -- Tap registers.
+    signal tap_delay_r  : mag_sq_t := (others => '0');
     signal tap_et_a_r   : mag_sq_t := (others => '0');
     signal tap_et_b_r   : mag_sq_t := (others => '0');
     signal tap_ew0_a_r  : mag_sq_t := (others => '0');
@@ -73,18 +78,19 @@ architecture rtl of adsb_tapped_buffer is
     signal tap_ew2_b_r  : mag_sq_t := (others => '0');
     signal tap_ew3_a_r  : mag_sq_t := (others => '0');
     signal tap_ew3_b_r  : mag_sq_t := (others => '0');
-    signal tap_ec_a_r   : mag_sq_t := (others => '0');
-    signal tap_ec_b_r   : mag_sq_t := (others => '0');
-    signal tap_enf0_a_r : mag_sq_t := (others => '0');
-    signal tap_enf0_b_r : mag_sq_t := (others => '0');
-    signal tap_enf1_a_r : mag_sq_t := (others => '0');
-    signal tap_enf1_b_r : mag_sq_t := (others => '0');
-    signal tap_enf2_a_r : mag_sq_t := (others => '0');
-    signal tap_enf2_b_r : mag_sq_t := (others => '0');
-    signal tap_enf3_a_r : mag_sq_t := (others => '0');
-    signal tap_enf3_b_r : mag_sq_t := (others => '0');
+    signal tap_enf_a_r  : mag_sq_t := (others => '0');
+    signal tap_enf_b_r  : mag_sq_t := (others => '0');
+    signal tap_ec0_a_r  : mag_sq_t := (others => '0');
+    signal tap_ec0_b_r  : mag_sq_t := (others => '0');
+    signal tap_ec1_a_r  : mag_sq_t := (others => '0');
+    signal tap_ec1_b_r  : mag_sq_t := (others => '0');
+    signal tap_ec2_a_r  : mag_sq_t := (others => '0');
+    signal tap_ec2_b_r  : mag_sq_t := (others => '0');
+    signal tap_ec3_a_r  : mag_sq_t := (others => '0');
+    signal tap_ec3_b_r  : mag_sq_t := (others => '0');
 
 begin
+    tap_delay_o  <= tap_delay_r;
     tap_et_a_o   <= tap_et_a_r;
     tap_et_b_o   <= tap_et_b_r;
     tap_ew0_a_o  <= tap_ew0_a_r;
@@ -95,16 +101,16 @@ begin
     tap_ew2_b_o  <= tap_ew2_b_r;
     tap_ew3_a_o  <= tap_ew3_a_r;
     tap_ew3_b_o  <= tap_ew3_b_r;
-    tap_ec_a_o   <= tap_ec_a_r;
-    tap_ec_b_o   <= tap_ec_b_r;
-    tap_enf0_a_o <= tap_enf0_a_r;
-    tap_enf0_b_o <= tap_enf0_b_r;
-    tap_enf1_a_o <= tap_enf1_a_r;
-    tap_enf1_b_o <= tap_enf1_b_r;
-    tap_enf2_a_o <= tap_enf2_a_r;
-    tap_enf2_b_o <= tap_enf2_b_r;
-    tap_enf3_a_o <= tap_enf3_a_r;
-    tap_enf3_b_o <= tap_enf3_b_r;
+    tap_enf_a_o  <= tap_enf_a_r;
+    tap_enf_b_o  <= tap_enf_b_r;
+    tap_ec0_a_o  <= tap_ec0_a_r;
+    tap_ec0_b_o  <= tap_ec0_b_r;
+    tap_ec1_a_o  <= tap_ec1_a_r;
+    tap_ec1_b_o  <= tap_ec1_b_r;
+    tap_ec2_a_o  <= tap_ec2_a_r;
+    tap_ec2_b_o  <= tap_ec2_b_r;
+    tap_ec3_a_o  <= tap_ec3_a_r;
+    tap_ec3_b_o  <= tap_ec3_b_r;
 
     buffer_process : process(clk)
     begin
@@ -126,6 +132,7 @@ begin
         if rising_edge(clk) then
             if ce_i = '1' then
                 -- Assign each tap register from its buffer position.
+                tap_delay_r  <= mag_sq_buf_shift_reg(TAP_PIPELINE_DELAY);
                 tap_et_a_r   <= mag_sq_buf_shift_reg(TAP_ET_A_POS);
                 tap_et_b_r   <= mag_sq_buf_shift_reg(TAP_ET_B_POS);
                 tap_ew0_a_r  <= mag_sq_buf_shift_reg(TAP_EW0_A_POS);
@@ -136,16 +143,16 @@ begin
                 tap_ew2_b_r  <= mag_sq_buf_shift_reg(TAP_EW2_B_POS);
                 tap_ew3_a_r  <= mag_sq_buf_shift_reg(TAP_EW3_A_POS);
                 tap_ew3_b_r  <= mag_sq_buf_shift_reg(TAP_EW3_B_POS);
-                tap_ec_a_r   <= mag_sq_buf_shift_reg(TAP_EC_A_POS);
-                tap_ec_b_r   <= mag_sq_buf_shift_reg(TAP_EC_B_POS);
-                tap_enf0_a_r <= mag_sq_buf_shift_reg(TAP_ENF0_A_POS);
-                tap_enf0_b_r <= mag_sq_buf_shift_reg(TAP_ENF0_B_POS);
-                tap_enf1_a_r <= mag_sq_buf_shift_reg(TAP_ENF1_A_POS);
-                tap_enf1_b_r <= mag_sq_buf_shift_reg(TAP_ENF1_B_POS);
-                tap_enf2_a_r <= mag_sq_buf_shift_reg(TAP_ENF2_A_POS);
-                tap_enf2_b_r <= mag_sq_buf_shift_reg(TAP_ENF2_B_POS);
-                tap_enf3_a_r <= mag_sq_buf_shift_reg(TAP_ENF3_A_POS);
-                tap_enf3_b_r <= mag_sq_buf_shift_reg(TAP_ENF3_B_POS);
+                tap_enf_a_r  <= mag_sq_buf_shift_reg(TAP_ENF_A_POS);
+                tap_enf_b_r  <= mag_sq_buf_shift_reg(TAP_ENF_B_POS);
+                tap_ec0_a_r  <= mag_sq_buf_shift_reg(TAP_EC0_A_POS);
+                tap_ec0_b_r  <= mag_sq_buf_shift_reg(TAP_EC0_B_POS);
+                tap_ec1_a_r  <= mag_sq_buf_shift_reg(TAP_EC1_A_POS);
+                tap_ec1_b_r  <= mag_sq_buf_shift_reg(TAP_EC1_B_POS);
+                tap_ec2_a_r  <= mag_sq_buf_shift_reg(TAP_EC2_A_POS);
+                tap_ec2_b_r  <= mag_sq_buf_shift_reg(TAP_EC2_B_POS);
+                tap_ec3_a_r  <= mag_sq_buf_shift_reg(TAP_EC3_A_POS);
+                tap_ec3_b_r  <= mag_sq_buf_shift_reg(TAP_EC3_B_POS);
             end if;
         end if;
     end process tap_registers_process;

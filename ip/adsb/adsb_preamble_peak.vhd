@@ -14,7 +14,8 @@ entity adsb_preamble_peak is
         i_i : in iq_t;
         q_i : in iq_t;
         mag_sq_i : in mag_sq_t;
-        max_mag_sq_i : in mag_sq_t;
+        avg_carrier_i : in mag_sq_t;
+        avg_noise_i : in mag_sq_t;
         win_inside_energy_i : in win_energy_t;
         win_outside_energy_i : in win_energy_t;
         all_thresholds_ok_i : in std_logic;
@@ -22,7 +23,8 @@ entity adsb_preamble_peak is
         i_o : out iq_t;
         q_o : out iq_t;
         mag_sq_o : out mag_sq_t;
-        max_mag_sq_o : out mag_sq_t;
+        avg_carrier_o : out mag_sq_t;
+        avg_noise_o : out mag_sq_t;
         detect_o : out std_logic
     );
 end adsb_preamble_peak;
@@ -37,7 +39,8 @@ architecture rtl of adsb_preamble_peak is
         i             : iq_t;
         q             : iq_t;
         mag_sq        : mag_sq_t;
-        max_mag_sq    : mag_sq_t;
+        avg_carrier   : mag_sq_t;
+        avg_noise     : mag_sq_t;
         win_ei        : win_energy_t;
         win_eo        : win_energy_t;
         thresholds_ok : std_logic;
@@ -48,7 +51,8 @@ architecture rtl of adsb_preamble_peak is
             i             => (others => '0'),
             q             => (others => '0'),
             mag_sq        => (others => '0'),
-            max_mag_sq    => (others => '0'),
+            avg_carrier   => (others => '0'),
+            avg_noise     => (others => '0'),
             win_ei        => (others => '0'),
             win_eo        => (others => '0'),
             thresholds_ok => '0'
@@ -77,7 +81,8 @@ architecture rtl of adsb_preamble_peak is
     signal i_r, i_z3, i_z4 : iq_t := (others => '0');
     signal q_r, q_z3, q_z4 : iq_t := (others => '0');
     signal mag_sq_r, mag_sq_z3, mag_sq_z4 : mag_sq_t := (others => '0');
-    signal max_mag_sq_r, max_mag_sq_z3, max_mag_sq_z4 : mag_sq_t := (others => '0');
+    signal avg_carrier_r, avg_carrier_z3, avg_carrier_z4 : mag_sq_t := (others => '0');
+    signal avg_noise_r, avg_noise_z3, avg_noise_z4 : mag_sq_t := (others => '0');
     signal detect_r : std_logic := '0';
 
     -- Check that all bits in a standard logic vector are '1'.
@@ -94,11 +99,12 @@ architecture rtl of adsb_preamble_peak is
 
 begin
     -- Drive outputs from registered signals.
-    i_o          <= i_r;
-    q_o          <= q_r;
-    mag_sq_o     <= mag_sq_r;
-    max_mag_sq_o <= max_mag_sq_r;
-    detect_o     <= detect_r;
+    i_o           <= i_r;
+    q_o           <= q_r;
+    mag_sq_o      <= mag_sq_r;
+    avg_carrier_o <= avg_carrier_r;
+    avg_noise_o   <= avg_noise_r;
+    detect_o      <= detect_r;
 
     -- Buffer windowed sample records into a history array.
     history_buffer_process : process(clk)
@@ -112,7 +118,8 @@ begin
                 history_a(0).i             <= i_i;
                 history_a(0).q             <= q_i;
                 history_a(0).mag_sq        <= mag_sq_i;
-                history_a(0).max_mag_sq    <= max_mag_sq_i;
+                history_a(0).avg_carrier   <= avg_carrier_i;
+                history_a(0).avg_noise     <= avg_noise_i;
                 history_a(0).win_ei        <= win_inside_energy_i;
                 history_a(0).win_eo        <= win_outside_energy_i;
                 history_a(0).thresholds_ok <= all_thresholds_ok_i;
@@ -209,22 +216,25 @@ begin
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
-                i_z3          <= history_a(CENTRE_RECORD + DELAY_OFFSET).i;
-                q_z3          <= history_a(CENTRE_RECORD + DELAY_OFFSET).q;
-                mag_sq_z3     <= history_a(CENTRE_RECORD + DELAY_OFFSET).mag_sq;
-                max_mag_sq_z3 <= history_a(CENTRE_RECORD + DELAY_OFFSET).max_mag_sq;
+                i_z3           <= history_a(CENTRE_RECORD + DELAY_OFFSET).i;
+                q_z3           <= history_a(CENTRE_RECORD + DELAY_OFFSET).q;
+                mag_sq_z3      <= history_a(CENTRE_RECORD + DELAY_OFFSET).mag_sq;
+                avg_carrier_z3 <= history_a(CENTRE_RECORD + DELAY_OFFSET).avg_carrier;
+                avg_noise_z3   <= history_a(CENTRE_RECORD + DELAY_OFFSET).avg_noise;
 
                 -- The delay is actually more than the buffer, so need an additional register.
-                i_z4          <= i_z3;
-                q_z4          <= q_z3;
-                mag_sq_z4     <= mag_sq_z3;
-                max_mag_sq_z4 <= max_mag_sq_z3;
+                i_z4           <= i_z3;
+                q_z4           <= q_z3;
+                mag_sq_z4      <= mag_sq_z3;
+                avg_carrier_z4 <= avg_carrier_z3;
+                avg_noise_z4   <= avg_noise_z3;
 
                 -- Second additional delay.
-                i_r          <= i_z4;
-                q_r          <= q_z4;
-                mag_sq_r     <= mag_sq_z4;
-                max_mag_sq_r <= max_mag_sq_z4;
+                i_r           <= i_z4;
+                q_r           <= q_z4;
+                mag_sq_r      <= mag_sq_z4;
+                avg_carrier_r <= avg_carrier_z4;
+                avg_noise_r   <= avg_noise_z4;
             end if;
         end if;
     end process delay_process;

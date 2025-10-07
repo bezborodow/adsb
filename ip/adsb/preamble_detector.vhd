@@ -35,17 +35,19 @@ architecture rtl of preamble_detector is
     signal win_i              : iq_t := (others => '0');
     signal win_q              : iq_t := (others => '0');
     signal win_mag_sq         : mag_sq_t := (others => '0');
-    signal win_max_mag_sq     : mag_sq_t := (others => '0');
+    signal win_avg_carrier    : mag_sq_t := (others => '0');
+    signal win_avg_noise      : mag_sq_t := (others => '0');
     signal win_inside_energy  : win_energy_t := (others => '0');
     signal win_outside_energy : win_energy_t := (others => '0');
     signal win_thres_ok       : std_logic := '0';
 
-    -- Peak outputs (final outputs from the cascade.)
-    signal pk_i          : iq_t := (others => '0');
-    signal pk_q          : iq_t := (others => '0');
-    signal pk_mag_sq     : mag_sq_t := (others => '0');
-    signal pk_max_mag_sq : mag_sq_t := (others => '0');
-    signal pk_detect     : std_logic := '0';
+    -- Peak detector outputs (final outputs from the cascade.)
+    signal pkd_i           : iq_t := (others => '0');
+    signal pkd_q           : iq_t := (others => '0');
+    signal pkd_mag_sq      : mag_sq_t := (others => '0');
+    signal pkd_avg_carrier : mag_sq_t := (others => '0');
+    signal pkd_avg_noise   : mag_sq_t := (others => '0');
+    signal pkd_detect      : std_logic := '0';
 
     -- Output registers.
     signal i_r              : iq_t := (others => '0');
@@ -89,7 +91,8 @@ begin
             win_inside_energy_o  => win_inside_energy,
             win_outside_energy_o => win_outside_energy,
             all_thresholds_ok_o  => win_thres_ok,
-            max_mag_sq_o         => win_max_mag_sq
+            avg_carrier_o        => win_avg_carrier,
+            avg_noise_o          => win_avg_noise
         );
 
     -- Peak detector.
@@ -103,16 +106,18 @@ begin
             i_i                  => win_i,
             q_i                  => win_q,
             mag_sq_i             => win_mag_sq,
-            max_mag_sq_i         => win_max_mag_sq,
+            avg_carrier_i        => win_avg_carrier,
+            avg_noise_i          => win_avg_noise,
             win_inside_energy_i  => win_inside_energy,
             win_outside_energy_i => win_outside_energy,
             all_thresholds_ok_i  => win_thres_ok,
 
-            i_o                  => pk_i,
-            q_o                  => pk_q,
-            mag_sq_o             => pk_mag_sq,
-            max_mag_sq_o         => pk_max_mag_sq,
-            detect_o             => pk_detect
+            i_o                  => pkd_i,
+            q_o                  => pkd_q,
+            mag_sq_o             => pkd_mag_sq,
+            avg_carrier_o        => pkd_avg_carrier,
+            avg_noise_o          => pkd_avg_noise,
+            detect_o             => pkd_detect
         );
 
     -- Drive outputs with registers.
@@ -130,18 +135,19 @@ begin
             if ce_i = '1' then
 
                 -- Pass through signals to the next stage, which is the Schmitt trigger.
-                i_r      <= pk_i;
-                q_r      <= pk_q;
-                mag_sq_r <= pk_mag_sq;
-                detect_r <= pk_detect;
+                i_r      <= pkd_i;
+                q_r      <= pkd_q;
+                mag_sq_r <= pkd_mag_sq;
+                detect_r <= pkd_detect;
 
                 -- Latch the hysteresis thresholds when a preamble is detected.
-                if pk_detect = '1' then
+                if pkd_detect = '1' then
                     -- High hysteresis threshold is half of the maximum of the envelope.
-                    high_threshold_r <= pk_max_mag_sq srl 1;
+                    high_threshold_r <= resize(pkd_avg_carrier + pkd_avg_noise srl 1, high_threshold_r'length);
 
                     -- Low hysteresis threshold is one eighth of the maximum of the envelope.
-                    low_threshold_r <= pk_max_mag_sq srl 3;
+                    -- TODO check this.
+                    low_threshold_r <= resize((pkd_avg_carrier + to_unsigned(7, low_threshold_r'length+4) * pkd_avg_noise) srl 3, low_threshold_r'length);
                 end if;
             end if;
         end if;

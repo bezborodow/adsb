@@ -19,7 +19,8 @@ entity adsb_preamble_window is
         i_o : out iq_t;
         q_o : out iq_t;
         mag_sq_o : out mag_sq_t;
-        max_mag_sq_o : out mag_sq_t;
+        avg_carrier_o : out mag_sq_t;
+        avg_noise_o : out mag_sq_t;
         win_inside_energy_o : out win_energy_t;
         win_outside_energy_o : out win_energy_t;
         all_thresholds_ok_o : out std_logic
@@ -27,120 +28,254 @@ entity adsb_preamble_window is
 end adsb_preamble_window;
 
 architecture rtl of adsb_preamble_window is
-    -- Accumulator width for for entire preamble buffer.
-    constant BUFFER_ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(PREAMBLE_BUFFER_LENGTH))));
-
-    -- Accumulator width for a single symbol.
-    constant SYMBOL_ACCUMULATOR_WIDTH : positive := IQ_MAG_SQ_WIDTH + integer(ceil(log2(real(SAMPLES_PER_SYMBOL))));
-
-    -- Number of symbols in the preamble.
-    constant NUM_SYMBOLS_IN_PREAMBLE : positive := 16;
-
     -- How many samples the IQ stream is delayed by compared to when the preamble is detected.
-    constant PIPELINE_DELAY : positive := 6;
+    constant PIPELINE_DELAY : positive := 3;
 
     -- Where each pulse in the preamble starts.
     -- There are four pulses in the preamble of an ADS-B message.
     constant PREAMBLE_POSITION : adsb_int_array_t := (0, 2, 7, 9);
 
-    -- Buffers for magnitude-squared and IQ samples.
-    -- Magnitude buffer length is as long as the number of samples in the
-    -- preamble and is used for preamble detection.
+    -- Delay pipeline for IQ.
     -- The IQ buffer is for timing and is as long as the number of delay clock
     -- cycles of this component.
-    -- TODO Remove this. Move to tapped buffer.
-    subtype mag_sq_buffer_index_t is natural range 0 to PREAMBLE_BUFFER_LENGTH-1;
-    signal mag_sq_buf_shift_reg : mag_sq_buffer_t(0 to PREAMBLE_BUFFER_LENGTH-1) := (others => (others => '0'));
-
-    -- Symbol window register.
-    type symbol_t is array (natural range <>) of mag_sq_buffer_t(0 to SAMPLES_PER_SYMBOL-1);
-    signal symbol_reg : symbol_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => (others => '0')));
-
-    -- Accumulated buffer energy.
-    subtype buffer_energy_t is unsigned(BUFFER_ACCUMULATOR_WIDTH-1 downto 0);
-
-    -- Symbol energy.
-    -- This is smaller in width than buffer energy.
-    subtype symbol_energy_t is unsigned(SYMBOL_ACCUMULATOR_WIDTH-1 downto 0);
-    type symbol_energy_array_t is array (natural range <>) of symbol_energy_t;
-    signal symbol_energy_a : symbol_energy_array_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => '0'));
-    signal symbol_energy_a_z1 : symbol_energy_array_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => '0'));
-
-    -- Maximum magnitude squared.
-    type symbol_maximum_array_t is array (natural range <>) of mag_sq_t;
-    signal symbol_max_a : symbol_maximum_array_t(0 to 3) := (others => (others => '0'));
-
-    -- Delay pipeline for IQ.
     signal i_buf_reg, q_buf_reg : iq_buffer_t(0 to PIPELINE_DELAY-1) := (others => (others => '0'));
 
-    -- Stage 4 registered signals.
-    signal stage4_max0_r               : mag_sq_t := (others => '0');
-    signal stage4_max1_r               : mag_sq_t := (others => '0');
-    signal stage4_max_mag_sq_r         : mag_sq_t := (others => '0');
-    signal stage4_win_inside_energy_r  : buffer_energy_t := (others => '0');
-    signal stage4_win_outside_energy_r : buffer_energy_t := (others => '0');
-    signal stage4_symbol_energy_a_r    : symbol_energy_array_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => '0'));
+    -- Taps.
+    constant TAP_NOISE_FLOOR_LENGTH : integer := 2 ** integer(floor(log2(real(6*SAMPLES_PER_SYMBOL - 1)))); -- L_M.
+    constant TAP_CARRIER_LENGTH     : integer := 2 ** integer(floor(log2(real(SAMPLES_PER_SYMBOL - 1)))); -- L_C.
+    signal buf_tap_delay  : mag_sq_t;
+    signal buf_tap_et_a   : mag_sq_t;
+    signal buf_tap_et_b   : mag_sq_t;
+    signal buf_tap_ew0_a  : mag_sq_t;
+    signal buf_tap_ew0_b  : mag_sq_t;
+    signal buf_tap_ew1_a  : mag_sq_t;
+    signal buf_tap_ew1_b  : mag_sq_t;
+    signal buf_tap_ew2_a  : mag_sq_t;
+    signal buf_tap_ew2_b  : mag_sq_t;
+    signal buf_tap_ew3_a  : mag_sq_t;
+    signal buf_tap_ew3_b  : mag_sq_t;
+    signal buf_tap_enf_a  : mag_sq_t;
+    signal buf_tap_enf_b  : mag_sq_t;
+    signal buf_tap_ec0_a  : mag_sq_t;
+    signal buf_tap_ec0_b  : mag_sq_t;
+    signal buf_tap_ec1_a  : mag_sq_t;
+    signal buf_tap_ec1_b  : mag_sq_t;
+    signal buf_tap_ec2_a  : mag_sq_t;
+    signal buf_tap_ec2_b  : mag_sq_t;
+    signal buf_tap_ec3_a  : mag_sq_t;
+    signal buf_tap_ec3_b  : mag_sq_t;
 
-    -- Stage 5 registered signals.
-    signal stage5_max_mag_sq_r         : mag_sq_t := (others => '0');
-    signal stage5_win_inside_energy_r  : win_energy_t := (others => '0'); -- Shrink (resize) at stage 5.
-    signal stage5_win_outside_energy_r : win_energy_t := (others => '0');
-    signal stage5_win_total_energy_r   : buffer_energy_t := (others => '0');
-    signal stage5_symbol_energy_a_r    : symbol_energy_array_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => '0'));
+    -- Rolling sums.
+    constant SUM_NOISE_FLOOR_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, TAP_NOISE_FLOOR_LENGTH);
+    constant SUM_CARRIER_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, TAP_CARRIER_LENGTH);
+    constant SUM_BUFFER_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, PREAMBLE_BUFFER_LENGTH);
+    constant SUM_SYMBOL_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, SAMPLES_PER_SYMBOL);
+    signal rs_et_sum  : unsigned(SUM_BUFFER_WIDTH-1 downto 0);
+    signal rs_ew0_sum : unsigned(SUM_SYMBOL_WIDTH-1 downto 0);
+    signal rs_ew1_sum : unsigned(SUM_SYMBOL_WIDTH-1 downto 0);
+    signal rs_ew2_sum : unsigned(SUM_SYMBOL_WIDTH-1 downto 0);
+    signal rs_ew3_sum : unsigned(SUM_SYMBOL_WIDTH-1 downto 0);
+    signal rs_enf_sum : unsigned(SUM_NOISE_FLOOR_WIDTH-1 downto 0);
+    signal rs_ec0_sum : unsigned(SUM_CARRIER_WIDTH-1 downto 0);
+    signal rs_ec1_sum : unsigned(SUM_CARRIER_WIDTH-1 downto 0);
+    signal rs_ec2_sum : unsigned(SUM_CARRIER_WIDTH-1 downto 0);
+    signal rs_ec3_sum : unsigned(SUM_CARRIER_WIDTH-1 downto 0);
+
+    -- Accumulated buffer energy.
+    subtype buffer_energy_t is unsigned(SUM_BUFFER_WIDTH-1 downto 0);
 
     -- Output registers.
     signal win_inside_energy_r : win_energy_t := (others => '0');
     signal win_outside_energy_r : win_energy_t := (others => '0');
-    signal max_mag_sq_r : mag_sq_t := (others => '0');
+    signal avg_mag_sq_carrier_r, avg_mag_sq_noise_floor_r : mag_sq_t := (others => '0');
     signal i_r, q_r : iq_t := (others => '0');
     signal mag_sq_r : unsigned(IQ_MAG_SQ_WIDTH-1 downto 0) := (others => '0');
     signal all_thresholds_ok_r : std_logic := '0';
 
-    -- Finds the max of four samples from the symbol.
-    -- This does not check every symbol, otherwise timing would fail,
-    -- and a more elaborate algorithmn would be required.
-    function find_max_in_symbol(symbol_v : mag_sq_buffer_t) return mag_sq_t is
-        -- Need to compare in a tree. Compare first two pairs,
-        -- then second pair. Choose four samples, evenly spaced in the symbol.
-        constant SAMPLE_INDICES : adsb_int_array_t := (
-            SAMPLES_PER_SYMBOL / 8,
-            SAMPLES_PER_SYMBOL / 8 + SAMPLES_PER_SYMBOL / 4,
-            SAMPLES_PER_SYMBOL / 8 + 2 * SAMPLES_PER_SYMBOL / 4,
-            SAMPLES_PER_SYMBOL / 8 + 3 * SAMPLES_PER_SYMBOL / 4
+begin
+    u_adsb_tapped_buffer : entity work.adsb_tapped_buffer
+        generic map (
+            PREAMBLE_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH,
+            TAP_PIPELINE_DELAY     => PREAMBLE_BUFFER_LENGTH - PIPELINE_DELAY + 1,
+            TAP_ET_B_POS           => 0,
+            TAP_ET_A_POS           => PREAMBLE_BUFFER_LENGTH - 1,
+            TAP_EW0_B_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_SYMBOL,
+            TAP_EW0_A_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_SYMBOL + SAMPLES_PER_SYMBOL - 1,
+            TAP_EW1_B_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_SYMBOL,
+            TAP_EW1_A_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_SYMBOL + SAMPLES_PER_SYMBOL - 1,
+            TAP_EW2_B_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_SYMBOL,
+            TAP_EW2_A_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_SYMBOL + SAMPLES_PER_SYMBOL - 1,
+            TAP_EW3_B_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_SYMBOL,
+            TAP_EW3_A_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_SYMBOL + SAMPLES_PER_SYMBOL - 1,
+            TAP_ENF_B_POS          => 13 * SAMPLES_PER_SYMBOL - TAP_NOISE_FLOOR_LENGTH / 2,
+            TAP_ENF_A_POS          => 13 * SAMPLES_PER_SYMBOL - TAP_NOISE_FLOOR_LENGTH / 2 + TAP_NOISE_FLOOR_LENGTH - 1,
+            TAP_EC0_B_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2,
+            TAP_EC0_A_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1,
+            TAP_EC1_B_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2,
+            TAP_EC1_A_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1,
+            TAP_EC2_B_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2,
+            TAP_EC2_A_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1,
+            TAP_EC3_B_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2,
+            TAP_EC3_A_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1
+        )
+        port map (
+            clk          => clk,
+            ce_i         => ce_i,
+            mag_sq_i     => mag_sq_i,
+            tap_delay_o  => buf_tap_delay,
+            tap_et_a_o   => buf_tap_et_a,
+            tap_et_b_o   => buf_tap_et_b,
+            tap_ew0_a_o  => buf_tap_ew0_a,
+            tap_ew0_b_o  => buf_tap_ew0_b,
+            tap_ew1_a_o  => buf_tap_ew1_a,
+            tap_ew1_b_o  => buf_tap_ew1_b,
+            tap_ew2_a_o  => buf_tap_ew2_a,
+            tap_ew2_b_o  => buf_tap_ew2_b,
+            tap_ew3_a_o  => buf_tap_ew3_a,
+            tap_ew3_b_o  => buf_tap_ew3_b,
+            tap_enf_a_o  => buf_tap_enf_a,
+            tap_enf_b_o  => buf_tap_enf_b,
+            tap_ec0_a_o  => buf_tap_ec0_a,
+            tap_ec0_b_o  => buf_tap_ec0_b,
+            tap_ec1_a_o  => buf_tap_ec1_a,
+            tap_ec1_b_o  => buf_tap_ec1_b,
+            tap_ec2_a_o  => buf_tap_ec2_a,
+            tap_ec2_b_o  => buf_tap_ec2_b,
+            tap_ec3_a_o  => buf_tap_ec3_a,
+            tap_ec3_b_o  => buf_tap_ec3_b
         );
 
-        -- First stage comparison.
-        variable max0_0_v, max0_1_v, max1_0_v, max1_1_v : mag_sq_t := (others => '0');
 
-        -- Second stage comparison.
-        variable max0_v, max1_v : mag_sq_t := (others => '0');
-    begin
-        max0_0_v := symbol_v(SAMPLE_INDICES(0));
-        max0_1_v := symbol_v(SAMPLE_INDICES(1));
-        max1_0_v := symbol_v(SAMPLE_INDICES(2));
-        max1_1_v := symbol_v(SAMPLE_INDICES(3));
+    u_adsb_rolling_sum_et : entity work.adsb_rolling_sum
+        generic map (
+            ROLLING_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH,
+            SUM_WIDTH             => SUM_BUFFER_WIDTH
+        )
+        port map (
+            clk        => clk,
+            ce_i       => ce_i,
+            incoming_i => buf_tap_et_a,
+            outgoing_i => buf_tap_et_b,
+            sum_o      => rs_et_sum
+        );
 
-        -- First stage.
-        if max0_0_v > max0_1_v then
-            max0_v := max0_0_v;
-        else
-            max0_v := max0_1_v;
-        end if;
-        if max1_0_v > max1_1_v then
-            max1_v := max1_0_v;
-        else
-            max1_v := max1_1_v;
-        end if;
+    u_adsb_rolling_sum_ew0 : entity work.adsb_rolling_sum
+        generic map (
+            ROLLING_BUFFER_LENGTH => SAMPLES_PER_SYMBOL,
+            SUM_WIDTH             => SUM_SYMBOL_WIDTH
+        )
+        port map (
+            clk        => clk,
+            ce_i       => ce_i,
+            incoming_i => buf_tap_ew0_a,
+            outgoing_i => buf_tap_ew0_b,
+            sum_o      => rs_ew0_sum
+        );
 
-        -- Second stage.
-        if max0_v > max1_v then
-            return max0_v;
-        end if;
+    u_adsb_rolling_sum_ew1 : entity work.adsb_rolling_sum
+        generic map (
+            ROLLING_BUFFER_LENGTH => SAMPLES_PER_SYMBOL,
+            SUM_WIDTH             => SUM_SYMBOL_WIDTH
+        )
+        port map (
+            clk        => clk,
+            ce_i       => ce_i,
+            incoming_i => buf_tap_ew1_a,
+            outgoing_i => buf_tap_ew1_b,
+            sum_o      => rs_ew1_sum
+        );
 
-        return max1_v;
-    end function;
+    u_adsb_rolling_sum_ew2 : entity work.adsb_rolling_sum
+        generic map (
+            ROLLING_BUFFER_LENGTH => SAMPLES_PER_SYMBOL,
+            SUM_WIDTH             => SUM_SYMBOL_WIDTH
+        )
+        port map (
+            clk        => clk,
+            ce_i       => ce_i,
+            incoming_i => buf_tap_ew2_a,
+            outgoing_i => buf_tap_ew2_b,
+            sum_o      => rs_ew2_sum
+        );
 
-begin
+    u_adsb_rolling_sum_ew3 : entity work.adsb_rolling_sum
+        generic map (
+            ROLLING_BUFFER_LENGTH => SAMPLES_PER_SYMBOL,
+            SUM_WIDTH             => SUM_SYMBOL_WIDTH
+        )
+        port map (
+            clk        => clk,
+            ce_i       => ce_i,
+            incoming_i => buf_tap_ew3_a,
+            outgoing_i => buf_tap_ew3_b,
+            sum_o      => rs_ew3_sum
+        );
+
+    u_adsb_rolling_sum_enf : entity work.adsb_rolling_sum
+        generic map (
+            ROLLING_BUFFER_LENGTH => TAP_NOISE_FLOOR_LENGTH,
+            SUM_WIDTH             => SUM_NOISE_FLOOR_WIDTH
+        )
+        port map (
+            clk        => clk,
+            ce_i       => ce_i,
+            incoming_i => buf_tap_enf_a,
+            outgoing_i => buf_tap_enf_b,
+            sum_o      => rs_enf_sum
+        );
+
+    u_adsb_rolling_sum_ec0 : entity work.adsb_rolling_sum
+        generic map (
+            ROLLING_BUFFER_LENGTH => TAP_CARRIER_LENGTH,
+            SUM_WIDTH             => SUM_CARRIER_WIDTH
+        )
+        port map (
+            clk        => clk,
+            ce_i       => ce_i,
+            incoming_i => buf_tap_ec0_a,
+            outgoing_i => buf_tap_ec0_b,
+            sum_o      => rs_ec0_sum
+        );
+
+    u_adsb_rolling_sum_ec1 : entity work.adsb_rolling_sum
+        generic map (
+            ROLLING_BUFFER_LENGTH => TAP_CARRIER_LENGTH,
+            SUM_WIDTH             => SUM_CARRIER_WIDTH
+        )
+        port map (
+            clk        => clk,
+            ce_i       => ce_i,
+            incoming_i => buf_tap_ec1_a,
+            outgoing_i => buf_tap_ec1_b,
+            sum_o      => rs_ec1_sum
+        );
+
+    u_adsb_rolling_sum_ec2 : entity work.adsb_rolling_sum
+        generic map (
+            ROLLING_BUFFER_LENGTH => TAP_CARRIER_LENGTH,
+            SUM_WIDTH             => SUM_CARRIER_WIDTH
+        )
+        port map (
+            clk        => clk,
+            ce_i       => ce_i,
+            incoming_i => buf_tap_ec2_a,
+            outgoing_i => buf_tap_ec2_b,
+            sum_o      => rs_ec2_sum
+        );
+
+    u_adsb_rolling_sum_ec3 : entity work.adsb_rolling_sum
+        generic map (
+            ROLLING_BUFFER_LENGTH => TAP_CARRIER_LENGTH,
+            SUM_WIDTH             => SUM_CARRIER_WIDTH
+        )
+        port map (
+            clk        => clk,
+            ce_i       => ce_i,
+            incoming_i => buf_tap_ec3_a,
+            outgoing_i => buf_tap_ec3_b,
+            sum_o      => rs_ec3_sum
+        );
+
     -- Combinatorial signals.
     i_o <= i_r;
     q_o <= q_r;
@@ -149,191 +284,79 @@ begin
     -- Drive output port from registers.
     win_inside_energy_o <= win_inside_energy_r;
     win_outside_energy_o <= win_outside_energy_r;
-    max_mag_sq_o <= max_mag_sq_r;
+    avg_carrier_o <= avg_mag_sq_carrier_r;
+    avg_noise_o <= avg_mag_sq_noise_floor_r;
     all_thresholds_ok_o <= all_thresholds_ok_r;
 
-    stage1_buffer_process : process(clk)
+    window_energy_process : process(clk)
+        variable inside_energy, outside_energy : unsigned(rs_et_sum'length-1 downto 0);
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
-                -- Append most recently arrived sample onto the end of the shift register.
-                mag_sq_buf_shift_reg(PREAMBLE_BUFFER_LENGTH-1) <= mag_sq_i;
-                i_buf_reg(PIPELINE_DELAY-1) <= i_i;
-                q_buf_reg(PIPELINE_DELAY-1) <= q_i;
-                
-                -- Pipeline shift registers for IQ and magnitude squared envelope.
-                for i in 0 to PREAMBLE_BUFFER_LENGTH-2 loop
-                    mag_sq_buf_shift_reg(i) <= mag_sq_buf_shift_reg(i+1);
-                end loop;
-                for i in 0 to PIPELINE_DELAY-2 loop
-                    i_buf_reg(i) <= i_buf_reg(i+1);
-                    q_buf_reg(i) <= q_buf_reg(i+1);
-                end loop;
+                inside_energy := resize(rs_ew0_sum, inside_energy'length)
+                               + resize(rs_ew1_sum, inside_energy'length)
+                               + resize(rs_ew2_sum, inside_energy'length)
+                               + resize(rs_ew3_sum, inside_energy'length);
+
+                outside_energy := resize(rs_et_sum, outside_energy'length) - inside_energy;
+
+                win_inside_energy_r <= shrink_right(inside_energy, win_energy_t'length);
+                win_outside_energy_r <= shrink_right(outside_energy, win_energy_t'length);
             end if;
         end if;
-    end process stage1_buffer_process;
+    end process window_energy_process;
 
-    -- Register symbol windows from the buffer before passing into the DSP.
-    stage2_symbol_register_process : process(clk)
-        variable buf_shift_idx : mag_sq_buffer_index_t := 0;
-    begin
-        if rising_edge(clk) then
-            if ce_i = '1' then
-                for i in 0 to NUM_SYMBOLS_IN_PREAMBLE-1 loop
-                    for j in 0 to SAMPLES_PER_SYMBOL-1 loop
-                        buf_shift_idx := i * SAMPLES_PER_SYMBOL + j;
-                        symbol_reg(i)(j) <= mag_sq_buf_shift_reg(buf_shift_idx);
-                    end loop;
-                end loop;
-            end if;
-        end if;
-    end process stage2_symbol_register_process;
-
-    -- Find energy per each symbol window.
-    stage3_symbol_energy_process : process(clk)
-        variable sym_accumulators : symbol_energy_array_t(0 to NUM_SYMBOLS_IN_PREAMBLE-1) := (others => (others => '0'));
-        variable sample_v : mag_sq_t := (others => '0');
-        variable accum_v : symbol_energy_t := (others => '0');
-        variable k : integer range 0 to 3 := 0;
-    begin
-        if rising_edge(clk) then
-            if ce_i = '1' then
-                -- Compute energy in each symbol window.
-                -- Zero local accumulators.
-                for i in 0 to NUM_SYMBOLS_IN_PREAMBLE-1 loop
-                    sym_accumulators(i) := (others => '0');
-                end loop;
-
-                -- For each symbol window.
-                k := 0;
-                for i in 0 to NUM_SYMBOLS_IN_PREAMBLE-1 loop
-                    -- Sum energy.
-                    for j in 0 to SAMPLES_PER_SYMBOL-1 loop
-                        sample_v := symbol_reg(i)(j);
-                        accum_v := resize(sample_v, accum_v'length);
-                        sym_accumulators(i) := sym_accumulators(i) + accum_v;
-                    end loop;
-                    symbol_energy_a(i) <= sym_accumulators(i);
-
-                    -- Find maximum value of envelope.
-                    -- Find max within each of the four high symbols first.
-                    -- Later, this will be narrowed down further in another clock cycle.
-                    if i = 0 or i = 2 or i = 7 or i = 9 then
-
-                        -- This can fail timing, so do not check every sample.
-                        symbol_max_a(k) <= find_max_in_symbol(symbol_reg(i));
-
-                        if k < 3 then
-                            k := k + 1;
-                        end if;
-                    end if;
-                end loop;
-            end if;
-        end if;
-    end process stage3_symbol_energy_process;
-
-    -- Find energy inside and outside preamble window.
-    stage4_window_energy_process : process(clk)
-        variable sum_inside_v : buffer_energy_t := (others => '0');
-        variable sum_outside_v : buffer_energy_t := (others => '0');
-        variable max_mag_sq_v : mag_sq_t := (others => '0');
-    begin
-        if rising_edge(clk) then
-            if ce_i = '1' then
-                sum_inside_v := (others => '0');
-                sum_outside_v := (others => '0');
-
-                -- For each symbol window.
-                for i in 0 to NUM_SYMBOLS_IN_PREAMBLE-1 loop
-
-                    -- Delay one cycle.
-                    symbol_energy_a_z1(i) <= symbol_energy_a(i);
-
-                    -- Summation of window energy.
-                    if i = 0 or i = 2 or i = 7 or i = 9 then
-                        sum_inside_v := sum_inside_v + resize(symbol_energy_a_z1(i), sum_inside_v'length);
-                    else
-                        sum_outside_v := sum_outside_v + resize(symbol_energy_a_z1(i), sum_outside_v'length);
-                    end if;
-                end loop;
-
-                -- Find maximum each of the four symbols.
-                -- This takes two cycles.
-                -- First two pairs to find maximum.
-                if symbol_max_a(0) > symbol_max_a(1) then
-                    stage4_max0_r <= symbol_max_a(0);
-                else
-                    stage4_max0_r <= symbol_max_a(1);
-                end if;
-
-                if symbol_max_a(2) > symbol_max_a(3) then
-                    stage4_max1_r <= symbol_max_a(2);
-                else
-                    stage4_max1_r <= symbol_max_a(3);
-                end if;
-
-                -- Last pair to find maximum.
-                if stage4_max0_r > stage4_max1_r then
-                    max_mag_sq_v := stage4_max0_r;
-                else
-                    max_mag_sq_v := stage4_max1_r;
-                end if;
-
-                -- Pass to next stage.
-                stage4_max_mag_sq_r <= max_mag_sq_v;
-                stage4_win_inside_energy_r <= sum_inside_v;
-                stage4_win_outside_energy_r <= sum_outside_v;
-                stage4_symbol_energy_a_r <= symbol_energy_a_z1;
-            end if;
-        end if;
-    end process stage4_window_energy_process;
-
-    -- Find energy inside and outside preamble window.
-    stage5_total_energy_process : process(clk)
-    begin
-        if rising_edge(clk) then
-            if ce_i = '1' then
-                stage5_max_mag_sq_r <= stage4_max_mag_sq_r;
-                stage5_win_inside_energy_r <= shrink_right(stage4_win_inside_energy_r, win_energy_t'length);
-                stage5_win_outside_energy_r <= shrink_right(stage4_win_outside_energy_r, win_energy_t'length);
-                stage5_win_total_energy_r <= stage4_win_inside_energy_r + stage4_win_outside_energy_r;
-                stage5_symbol_energy_a_r <= stage4_symbol_energy_a_r;
-            end if;
-        end if;
-    end process stage5_total_energy_process;
-
-    -- Threshold for each preamble high symbol.
-    stage6_thresholds_process : process(clk)
-        variable symhigh_energy_v : symbol_energy_array_t(0 to 3) := (others => (others => '0'));
-        variable total_energy_v, threshold_v : buffer_energy_t := (others => '0');
-
+    balanced_energy_process : process(clk)
+        variable ew_sum : unsigned(rs_ew0_sum'length-1 downto 0);
         variable all_thresholds_ok_v : std_logic := '0';
+        variable threshold_v : buffer_energy_t := (others => '0');
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
                 all_thresholds_ok_v := '1';
-                total_energy_v := stage5_win_total_energy_r;
 
                 -- The threshold applies to all four preamble high symbols.
                 -- The threshold is relative to total energy in the preamble buffer.
                 -- Threshold should be slightly less than 1/4 of total energy to trigger a detection.
                 -- Therefore, use multiplication followed by shift right by 4 to achieve 3/16.
                 -- The threshold ensures that each high symbol is getting roughly equal amounts of energy spread across it.
-                threshold_v := resize((total_energy_v * to_unsigned(3, total_energy_v'length+2)) srl 4, total_energy_v'length);
-                for i in PREAMBLE_POSITION'range loop
-                    symhigh_energy_v(i) := stage5_symbol_energy_a_r(PREAMBLE_POSITION(i));
-                    if resize(symhigh_energy_v(i), threshold_v'length) <= threshold_v then
+                threshold_v := resize((rs_et_sum * to_unsigned(3, rs_et_sum'length+2)) srl 4, rs_et_sum'length);
+                all_thresholds_ok_v := '1';
+                for i in 0 to 3 loop
+                    case i is
+                        when 0 => ew_sum := rs_ew0_sum;
+                        when 1 => ew_sum := rs_ew1_sum;
+                        when 2 => ew_sum := rs_ew2_sum;
+                        when 3 => ew_sum := rs_ew3_sum;
+                        when others => ew_sum := (others => '0');
+                    end case;
+                    if resize(ew_sum, threshold_v'length) <= threshold_v then
                         all_thresholds_ok_v := '0';
                     end if;
                 end loop;
 
-                win_inside_energy_r <= stage5_win_inside_energy_r;
-                win_outside_energy_r <= stage5_win_outside_energy_r;
-                max_mag_sq_r <= stage5_max_mag_sq_r;
                 all_thresholds_ok_r <= all_thresholds_ok_v;
             end if;
         end if;
-    end process stage6_thresholds_process;
+    end process balanced_energy_process;
+
+    -- Threshold for each preamble high symbol.
+    schmitt_trigger_thresholds_process : process(clk)
+        constant TOTAL_CARRIER_SUM_WIDTH : positive := SUM_CARRIER_WIDTH + 2;
+        variable total_carrier_sum_v : unsigned(TOTAL_CARRIER_SUM_WIDTH-1 downto 0);
+    begin
+        if rising_edge(clk) then
+            if ce_i = '1' then
+                total_carrier_sum_v := resize(rs_ec0_sum, total_carrier_sum_v'length)
+                                     + resize(rs_ec1_sum, total_carrier_sum_v'length)
+                                     + resize(rs_ec2_sum, total_carrier_sum_v'length)
+                                     + resize(rs_ec3_sum, total_carrier_sum_v'length);
+
+                avg_mag_sq_carrier_r <= shrink_right(total_carrier_sum_v, avg_mag_sq_carrier_r'length);
+                avg_mag_sq_noise_floor_r <= shrink_right(rs_enf_sum, avg_mag_sq_noise_floor_r'length);
+            end if;
+        end if;
+    end process schmitt_trigger_thresholds_process;
 
     -- Pass-through signals delayed against the pipeline delay.
     -- These signals are useful for keeping everything synchronised, since
@@ -342,9 +365,19 @@ begin
     begin
         if rising_edge(clk) then
             if ce_i = '1' then
+                -- Append most recently arrived sample onto the end of the shift register.
+                i_buf_reg(PIPELINE_DELAY-1) <= i_i;
+                q_buf_reg(PIPELINE_DELAY-1) <= q_i;
+                
+                -- Pipeline shift registers for IQ and magnitude squared envelope.
+                for i in 0 to PIPELINE_DELAY-2 loop
+                    i_buf_reg(i) <= i_buf_reg(i+1);
+                    q_buf_reg(i) <= q_buf_reg(i+1);
+                end loop;
+
                 i_r <= i_buf_reg(0);
                 q_r <= q_buf_reg(0);
-                mag_sq_r <= mag_sq_buf_shift_reg(PREAMBLE_BUFFER_LENGTH - PIPELINE_DELAY);
+                mag_sq_r <= buf_tap_delay;
             end if;
         end if;
     end process delay_process;
