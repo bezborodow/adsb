@@ -27,8 +27,7 @@ end adsb;
 
 architecture rtl of adsb is
     -- Internal signals and registers.
-    signal rdy_r : std_logic := '0';
-    signal vld_r : std_logic := '0';
+    signal vld_c : std_logic := '0';
     signal ce_c : std_logic := '0';
 
     -- Preamble detector signals.
@@ -141,15 +140,20 @@ begin
     -- Clock enable.
     ce_c <= d_vld_i; -- Enable clock upon valid IQ data from the ADC.
 
-    -- TODO Combinatorial signals.
-    vld_o <= vld_r;
-    detect_o <= detector_detect;
-    rdy_r <= rdy_i;
-    vld_r <= demod_vld and estimator_vld;
-    demod_rdy <= vld_r and rdy_r;
-    estimator_rdy <= vld_r and rdy_r;
+    -- Drive valid output combinatorially from demod and est.
+    vld_c <= demod_vld and estimator_vld;
+    vld_o <= vld_c;
+
+    -- Drive demod and estimator ready combinatorially from internal valid and ready input.
+    demod_rdy <= vld_c and rdy_i;
+    estimator_rdy <= vld_c and rdy_i;
+
+    -- Drive data outputs directly from respective internal components.
     est_re_o <= estimator_re;
     est_im_o <= estimator_im;
     data_o <= demod_data;
     w56_o <= demod_w56;
+
+    -- Drive detect strobe directly from preamble detector.
+    detect_o <= detector_detect;
 end rtl;
