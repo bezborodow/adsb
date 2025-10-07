@@ -39,6 +39,7 @@ begin
     uut : entity work.freq_est_serialiser
         port map (
             clk        => clk,
+            ce_i       => '1',
             m_vld_i    => srl_m_vld_i,
             m_rdy_o    => srl_m_rdy_o,
             m_est_re_i => srl_m_est_re_i,

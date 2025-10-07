@@ -11,6 +11,7 @@ entity ppm_demod is
     port (
         clk : in std_logic;
         ce_i : in std_logic;
+
         schmitt_i : in std_logic;
         detect_i : in std_logic;
         vld_o : out std_logic;

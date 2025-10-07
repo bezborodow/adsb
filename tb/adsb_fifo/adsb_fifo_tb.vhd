@@ -93,6 +93,7 @@ begin
         )
         port map (
             clk        => clk,
+            ce_i       => '1',
             rst        => fifo_rst,
 
             -- Write side.

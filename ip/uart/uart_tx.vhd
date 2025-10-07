@@ -11,6 +11,7 @@ entity uart_tx is
     );
     port (
         clk : in std_logic;
+        ce_i : in std_logic;
         vld_i : in std_logic;
         rdy_o : out std_logic;
         data_i : in std_logic_vector(DATA_WIDTH-1 downto 0);
@@ -55,12 +56,14 @@ begin
     baud_rate_process : process(clk)
     begin
         if rising_edge(clk) then
-            if baud_timer = CLK_DIV-1 then
-                baud_timer <= 0;
-                baud_strobe <= '1';
-            else
-                baud_strobe <= '0';
-                baud_timer <= baud_timer + 1;
+            if ce_i = '1' then
+                if baud_timer = CLK_DIV-1 then
+                    baud_timer <= 0;
+                    baud_strobe <= '1';
+                else
+                    baud_strobe <= '0';
+                    baud_timer <= baud_timer + 1;
+                end if;
             end if;
         end if;
     end process baud_rate_process;
@@ -69,17 +72,19 @@ begin
     data_handshake_process : process(clk)
     begin
         if rising_edge(clk) then
-            -- Accept data only when ready and there is valid data.
-            if rdy_r = '1' and vld_r = '1' then
-                queued_data <= data_r;
-                pending <= '1';
-            end if;
+            if ce_i = '1' then
+                -- Accept data only when ready and there is valid data.
+                if rdy_r = '1' and vld_r = '1' then
+                    queued_data <= data_r;
+                    pending <= '1';
+                end if;
 
-            -- Transmission process should acknowledge the queued data and begin sending.
-            -- When the transmission begins, then the pending flag is no longer required
-            -- to be high.
-            if pending = '1' and sending = '1' then
-                pending <= '0';
+                -- Transmission process should acknowledge the queued data and begin sending.
+                -- When the transmission begins, then the pending flag is no longer required
+                -- to be high.
+                if pending = '1' and sending = '1' then
+                    pending <= '0';
+                end if;
             end if;
         end if;
     end process data_handshake_process;
@@ -91,28 +96,30 @@ begin
         --variable parity : std_logic := '0';
     begin
         if rising_edge(clk) then
-            if baud_strobe = '1' then
-                -- Start of a new frame.
-                -- Send start bit and read data and stop bits into shift register.
-                if pending = '1' and sending = '0' then
-                    shift_counter <= 0;
-                    sending <= '1'; -- Let the data handshake process know that data is being sent.
-                    --parity := xor_reduce(queued_data);
-                    --shift_out <= "11" & parity & queued_data;
-                    shift_out <= "11" & queued_data;
-                    tx_r <= '0'; -- Start bit is logic low.
-                end if;
-
-                -- Increment counter until finished.
-                if pending = '0' and sending = '1' then
-                    if shift_counter = SHIFT_OUT_WIDTH-1 then
-                        sending <= '0';
-                    else
-                        shift_counter <= shift_counter + 1;
+            if ce_i = '1' then
+                if baud_strobe = '1' then
+                    -- Start of a new frame.
+                    -- Send start bit and read data and stop bits into shift register.
+                    if pending = '1' and sending = '0' then
+                        shift_counter <= 0;
+                        sending <= '1'; -- Let the data handshake process know that data is being sent.
+                        --parity := xor_reduce(queued_data);
+                        --shift_out <= "11" & parity & queued_data;
+                        shift_out <= "11" & queued_data;
+                        tx_r <= '0'; -- Start bit is logic low.
                     end if;
 
-                    tx_r <= shift_out(0);
-                    shift_out <= std_logic_vector(shift_right(unsigned(shift_out), 1));
+                    -- Increment counter until finished.
+                    if pending = '0' and sending = '1' then
+                        if shift_counter = SHIFT_OUT_WIDTH-1 then
+                            sending <= '0';
+                        else
+                            shift_counter <= shift_counter + 1;
+                        end if;
+
+                        tx_r <= shift_out(0);
+                        shift_out <= std_logic_vector(shift_right(unsigned(shift_out), 1));
+                    end if;
                 end if;
             end if;
         end if;

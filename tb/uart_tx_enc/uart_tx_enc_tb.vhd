@@ -40,6 +40,7 @@ begin
     uut : entity work.uart_tx_enc
         port map (
             clk => clk,
+            ce_i => '1',
             m_vld_i => master_vld,
             m_rdy_o => master_rdy,
             m_data_i => master_data,

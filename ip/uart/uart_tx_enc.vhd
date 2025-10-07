@@ -16,6 +16,7 @@ use work.uart_pkg.all;
 entity uart_tx_enc is
     port (
         clk : in std_logic;
+        ce_i : in std_logic;
 
         -- Master.
         m_vld_i : in std_logic;
@@ -68,43 +69,45 @@ begin
     encoder_process : process(clk)
     begin
         if rising_edge(clk) then
-            if buffer_valid = '1' and buffer_ready = '1' then
-                buffer_valid <= '0';
-                m_rdy_c <= '1';
-                encoder_buffer <= (others => x"00");
-            end if;
+            if ce_i = '1' then
+                if buffer_valid = '1' and buffer_ready = '1' then
+                    buffer_valid <= '0';
+                    m_rdy_c <= '1';
+                    encoder_buffer <= (others => x"00");
+                end if;
 
-            if m_vld_c = '1' and m_rdy_c = '1' then
-                -- Accept new data.
-                if m_ascii_c = '1' then
-                    -- ASCII mode.
-                    encoder_buffer(0) <= uart_ascii_hex(m_data_c(7 downto 4));
-                    encoder_buffer(1) <= uart_ascii_hex(m_data_c(3 downto 0));
-                    if m_eom_c = '1' then
-                        encoder_buffer(2) <= ASCII_NEWLINE;
+                if m_vld_c = '1' and m_rdy_c = '1' then
+                    -- Accept new data.
+                    if m_ascii_c = '1' then
+                        -- ASCII mode.
+                        encoder_buffer(0) <= uart_ascii_hex(m_data_c(7 downto 4));
+                        encoder_buffer(1) <= uart_ascii_hex(m_data_c(3 downto 0));
+                        if m_eom_c = '1' then
+                            encoder_buffer(2) <= ASCII_NEWLINE;
+                        else
+                            encoder_buffer(2) <= x"00";
+                        end if;
                     else
+                        -- Binary mode.
+                        encoder_buffer(0) <= m_data_c;
+                        if m_eom_c = '1' then
+                            encoder_buffer(1) <= ASCII_NEWLINE;
+                        else
+                            encoder_buffer(1) <= x"00";
+                        end if;
                         encoder_buffer(2) <= x"00";
                     end if;
-                else
-                    -- Binary mode.
-                    encoder_buffer(0) <= m_data_c;
-                    if m_eom_c = '1' then
-                        encoder_buffer(1) <= ASCII_NEWLINE;
-                    else
-                        encoder_buffer(1) <= x"00";
+                    buffer_valid <= '1';
+
+                    -- If the sender is busy, then the buffer contents will not be accepted,
+                    -- so need to delay the pipeline.
+                    if buffer_ready = '0' then
+                        m_rdy_c <= '0';
                     end if;
-                    encoder_buffer(2) <= x"00";
-                end if;
-                buffer_valid <= '1';
 
-                -- If the sender is busy, then the buffer contents will not be accepted,
-                -- so need to delay the pipeline.
-                if buffer_ready = '0' then
-                    m_rdy_c <= '0';
-                end if;
-
-                if encoder_buffer(1) /= x"00" and m_vld_c = '1' then
-                    m_rdy_c <= '0';
+                    if encoder_buffer(1) /= x"00" and m_vld_c = '1' then
+                        m_rdy_c <= '0';
+                    end if;
                 end if;
             end if;
         end if;
@@ -114,30 +117,32 @@ begin
     sender_process : process(clk)
     begin
         if rising_edge(clk) then
-            if s_vld_c = '1' and s_rdy_c = '1' then
-                if sender_buffer(1) = x"00" then
-                    s_vld_c <= '0';
-                    sender_buffer(0) <= x"00";
-                    buffer_ready <= '1';
-                else
-                    sender_buffer(0) <= sender_buffer(1);
-                    sender_buffer(1) <= sender_buffer(2);
-                    sender_buffer(2) <= x"00";
+            if ce_i = '1' then
+                if s_vld_c = '1' and s_rdy_c = '1' then
+                    if sender_buffer(1) = x"00" then
+                        s_vld_c <= '0';
+                        sender_buffer(0) <= x"00";
+                        buffer_ready <= '1';
+                    else
+                        sender_buffer(0) <= sender_buffer(1);
+                        sender_buffer(1) <= sender_buffer(2);
+                        sender_buffer(2) <= x"00";
+                    end if;
                 end if;
-            end if;
 
-            -- Accept data from the encoder buffer.
-            if buffer_valid = '1' and buffer_ready = '1' then
-                sender_buffer <= encoder_buffer;
-                s_vld_c <= '1';
+                -- Accept data from the encoder buffer.
+                if buffer_valid = '1' and buffer_ready = '1' then
+                    sender_buffer <= encoder_buffer;
+                    s_vld_c <= '1';
 
-                -- The buffer will be available on the next cycle if the slave is
-                -- ready and the buffer will be empty afterwards. Or if the buffer
-                -- is already empty.
-                if (s_rdy_c = '1' and encoder_buffer(1) = x"00" and sender_buffer(1) = x"00") then
-                    buffer_ready <= '1';
-                else
-                    buffer_ready <= '0';
+                    -- The buffer will be available on the next cycle if the slave is
+                    -- ready and the buffer will be empty afterwards. Or if the buffer
+                    -- is already empty.
+                    if (s_rdy_c = '1' and encoder_buffer(1) = x"00" and sender_buffer(1) = x"00") then
+                        buffer_ready <= '1';
+                    else
+                        buffer_ready <= '0';
+                    end if;
                 end if;
             end if;
         end if;

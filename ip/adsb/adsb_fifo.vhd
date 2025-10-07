@@ -11,6 +11,7 @@ entity adsb_fifo is
     );
     port (
         clk : in std_logic;
+        ce_i : in std_logic;
         rst : in std_logic;
 
         -- Write side.
@@ -75,31 +76,33 @@ begin
         variable rd_en_v : boolean;
     begin
         if rising_edge(clk) then
-            sm_fifo_n := sm_fifo;
+            if ce_i = '1' then
+                sm_fifo_n := sm_fifo;
 
-            wr_en_v := (wr_vld_i = '1') and (wr_rdy_c = '1');
-            rd_en_v := (rd_vld_c = '1') and (rd_rdy_i = '1');
+                wr_en_v := (wr_vld_i = '1') and (wr_rdy_c = '1');
+                rd_en_v := (rd_vld_c = '1') and (rd_rdy_i = '1');
 
-            -- Determine FIFO state (latching.)
-            if wr_en_v and not rd_en_v then
-                sm_fifo_n := FILLING;
+                -- Determine FIFO state (latching.)
+                if wr_en_v and not rd_en_v then
+                    sm_fifo_n := FILLING;
+                end if;
+                if not wr_en_v and rd_en_v then
+                    sm_fifo_n := EMPTYING;
+                end if;
+
+                -- Write.
+                if wr_en_v then
+                    ram(wr_addr) <= wr_data_i;
+                    wr_addr <= circular_incr(wr_addr);
+                end if;
+
+                -- Read.
+                if rd_en_v then
+                    rd_addr <= circular_incr(rd_addr);
+                end if;
+
+                sm_fifo <= sm_fifo_n;
             end if;
-            if not wr_en_v and rd_en_v then
-                sm_fifo_n := EMPTYING;
-            end if;
-
-            -- Write.
-            if wr_en_v then
-                ram(wr_addr) <= wr_data_i;
-                wr_addr <= circular_incr(wr_addr);
-            end if;
-
-            -- Read.
-            if rd_en_v then
-                rd_addr <= circular_incr(rd_addr);
-            end if;
-
-            sm_fifo <= sm_fifo_n;
         end if;
     end process fifo_process;
 end rtl;

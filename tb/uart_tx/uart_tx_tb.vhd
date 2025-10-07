@@ -33,6 +33,7 @@ begin
         )
         port map (
             clk => clk,
+            ce_i => '1',
             vld_i => uart_vld,
             rdy_o => uart_rdy,
             data_i => uart_data,

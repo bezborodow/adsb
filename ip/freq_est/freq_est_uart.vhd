@@ -23,6 +23,9 @@ architecture rtl of freq_est_uart is
     constant FREQ_EST_FIFO_WIDTH : integer := 64;
     constant FREQ_EST_FIFO_DEPTH : integer := 4;
 
+    -- Clock enable.
+    signal ce_c : std_logic := '0';
+
     -- 16 bit IQ to 12 bit registers.
     signal i_rx_12b_r : iq_t := (others => '0');
     signal q_rx_12b_r : iq_t := (others => '0');
@@ -67,7 +70,7 @@ begin
         )
         port map (
             clk => clk,
-            ce_i => d_vld_i,
+            ce_i => ce_c,
             gate_i => '1', -- Do not gate -- measure constantly.
             start_i => estimator_start,
             stop_i => '0', -- Stop automatically when the accumulator is full.
@@ -87,6 +90,7 @@ begin
         )
         port map (
             clk        => clk,
+            ce_i       => ce_c,
             rst        => '0',
             wr_data_i  => estimator_fifo_wr_data, -- This data is packed combinatorially for the FIFO.
             wr_vld_i   => estimator_vld,
@@ -99,6 +103,7 @@ begin
     u_freq_est_serialiser : entity work.freq_est_serialiser
         port map (
             clk        => clk,
+            ce_i       => ce_c,
             m_vld_i    => fifo_rd_vld,
             m_rdy_o    => fifo_rd_rdy,
             m_est_re_i => fifo_rd_re_c,
@@ -114,6 +119,7 @@ begin
     u_uart_tx_enc : entity work.uart_tx_enc
         port map (
             clk => clk,
+            ce_i => ce_c,
             m_vld_i => srl_s_vld,
             m_rdy_o => srl_s_rdy,
             m_data_i => srl_s_data,
@@ -130,11 +136,15 @@ begin
         )
         port map (
             clk => clk,
+            ce_i => ce_c,
             vld_i => enc_s_vld,
             rdy_o => enc_s_rdy,
             data_i => enc_s_data,
             tx_o => uart_tx
         );
+
+    -- Clock enable.
+    ce_c <= d_vld_i; -- Enable clock upon valid IQ data from the ADC.
 
     -- Extract 12 bit IQ data from 16 bits of the receive (rx) ADC.
     i_rx_12b_r <= resize(i_i, IQ_WIDTH);
@@ -153,10 +163,12 @@ begin
     main_process : process(clk)
     begin
         if rising_edge(clk) then
-            if estimator_enabled = '0' and estimator_vld = '0' then
-                estimator_start <= '1';
-            else
-                estimator_start <= '0';
+            if ce_c = '1' then
+                if estimator_enabled = '0' and estimator_vld = '0' then
+                    estimator_start <= '1';
+                else
+                    estimator_start <= '0';
+                end if;
             end if;
         end if;
     end process main_process;

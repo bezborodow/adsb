@@ -29,7 +29,7 @@ architecture rtl of adsb is
     -- Internal signals and registers.
     signal rdy_r : std_logic := '0';
     signal vld_r : std_logic := '0';
-    signal d_vld_r : std_logic := '0';
+    signal ce_c : std_logic := '0';
 
     -- Preamble detector signals.
     signal detector_detect : std_logic := '0';
@@ -65,7 +65,7 @@ begin
         )
         port map (
             clk => clk,
-            ce_i => d_vld_r,
+            ce_i => ce_c,
             i_i => i_i,
             q_i => q_i,
 
@@ -86,7 +86,7 @@ begin
         )
         port map (
             clk => clk,
-            ce_i => d_vld_r,
+            ce_i => ce_c,
             i_i => detector_i,
             q_i => detector_q,
             mag_sq_i => detector_mag_sq,
@@ -107,7 +107,7 @@ begin
         )
         port map (
             clk => clk,
-            ce_i => d_vld_r,
+            ce_i => ce_c,
             rdy_i => demod_rdy,
             schmitt_i => trigger_schmitt,
             detect_i => trigger_detect,
@@ -125,7 +125,7 @@ begin
         )
         port map (
             clk => clk,
-            ce_i => d_vld_r,
+            ce_i => ce_c,
             i_i => trigger_i,
             q_i => trigger_q,
             gate_i => trigger_schmitt,
@@ -138,7 +138,10 @@ begin
             est_im_o => estimator_im
         );
 
-    d_vld_r <= d_vld_i;
+    -- Clock enable.
+    ce_c <= d_vld_i; -- Enable clock upon valid IQ data from the ADC.
+
+    -- TODO Combinatorial signals.
     vld_o <= vld_r;
     detect_o <= detector_detect;
     rdy_r <= rdy_i;
