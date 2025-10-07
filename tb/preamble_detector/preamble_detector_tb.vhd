@@ -75,7 +75,7 @@ begin
         end_of_test <= true;
         wait for clk_period;
 
-        test_runner_cleanup(runner); -- Simulation ends here
+        test_runner_cleanup(runner); -- Simulation ends here.
         wait;
     end process stimulus_process;
 
