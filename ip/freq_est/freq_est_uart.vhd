@@ -160,10 +160,15 @@ begin
     -- Drive outputs.
     uart_tx_o <= uart_tx;
 
-    main_process : process(clk)
+    -- Process to restart the estimator after stopping.
+    -- Keeps the estimator running in an endless loop.
+    stop_start_process : process(clk)
     begin
         if rising_edge(clk) then
             if ce_c = '1' then
+                -- Check to see if the estimator has stopped (not enabled), but also
+                -- waits until the data has been accepted by UART (the valid flag
+                -- show be low after a ready/valid handshake.)
                 if estimator_enabled = '0' and estimator_vld = '0' then
                     estimator_start <= '1';
                 else
@@ -171,5 +176,5 @@ begin
                 end if;
             end if;
         end if;
-    end process main_process;
+    end process stop_start_process;
 end rtl;
