@@ -148,8 +148,7 @@ begin
 
     u_adsb_rolling_sum_et : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH,
-            SUM_WIDTH             => SUM_BUFFER_WIDTH
+            SUM_WIDTH => SUM_BUFFER_WIDTH
         )
         port map (
             clk        => clk,
@@ -161,8 +160,7 @@ begin
 
     u_adsb_rolling_sum_ew0 : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => SAMPLES_PER_SYMBOL,
-            SUM_WIDTH             => SUM_SYMBOL_WIDTH
+            SUM_WIDTH => SUM_SYMBOL_WIDTH
         )
         port map (
             clk        => clk,
@@ -174,8 +172,7 @@ begin
 
     u_adsb_rolling_sum_ew1 : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => SAMPLES_PER_SYMBOL,
-            SUM_WIDTH             => SUM_SYMBOL_WIDTH
+            SUM_WIDTH => SUM_SYMBOL_WIDTH
         )
         port map (
             clk        => clk,
@@ -187,8 +184,7 @@ begin
 
     u_adsb_rolling_sum_ew2 : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => SAMPLES_PER_SYMBOL,
-            SUM_WIDTH             => SUM_SYMBOL_WIDTH
+            SUM_WIDTH => SUM_SYMBOL_WIDTH
         )
         port map (
             clk        => clk,
@@ -200,8 +196,7 @@ begin
 
     u_adsb_rolling_sum_ew3 : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => SAMPLES_PER_SYMBOL,
-            SUM_WIDTH             => SUM_SYMBOL_WIDTH
+            SUM_WIDTH => SUM_SYMBOL_WIDTH
         )
         port map (
             clk        => clk,
@@ -213,8 +208,7 @@ begin
 
     u_adsb_rolling_sum_enf : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => TAP_NOISE_FLOOR_LENGTH,
-            SUM_WIDTH             => SUM_NOISE_FLOOR_WIDTH
+            SUM_WIDTH => SUM_NOISE_FLOOR_WIDTH
         )
         port map (
             clk        => clk,
@@ -226,8 +220,7 @@ begin
 
     u_adsb_rolling_sum_ec0 : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => TAP_CARRIER_LENGTH,
-            SUM_WIDTH             => SUM_CARRIER_WIDTH
+            SUM_WIDTH => SUM_CARRIER_WIDTH
         )
         port map (
             clk        => clk,
@@ -239,8 +232,7 @@ begin
 
     u_adsb_rolling_sum_ec1 : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => TAP_CARRIER_LENGTH,
-            SUM_WIDTH             => SUM_CARRIER_WIDTH
+            SUM_WIDTH => SUM_CARRIER_WIDTH
         )
         port map (
             clk        => clk,
@@ -252,8 +244,7 @@ begin
 
     u_adsb_rolling_sum_ec2 : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => TAP_CARRIER_LENGTH,
-            SUM_WIDTH             => SUM_CARRIER_WIDTH
+            SUM_WIDTH => SUM_CARRIER_WIDTH
         )
         port map (
             clk        => clk,
@@ -265,8 +256,7 @@ begin
 
     u_adsb_rolling_sum_ec3 : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => TAP_CARRIER_LENGTH,
-            SUM_WIDTH             => SUM_CARRIER_WIDTH
+            SUM_WIDTH => SUM_CARRIER_WIDTH
         )
         port map (
             clk        => clk,

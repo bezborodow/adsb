@@ -36,8 +36,7 @@ begin
 
     uut : entity work.adsb_rolling_sum
         generic map (
-            ROLLING_BUFFER_LENGTH => ROLLING_BUFFER_LENGTH,
-            SUM_WIDTH             => SUM_WIDTH
+            SUM_WIDTH => SUM_WIDTH
         )
         port map (
             clk        => clk,

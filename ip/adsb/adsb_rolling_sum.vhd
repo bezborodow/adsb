@@ -6,8 +6,7 @@ use work.adsb_pkg.all;
 
 entity adsb_rolling_sum is
     generic (
-        ROLLING_BUFFER_LENGTH : integer;
-        SUM_WIDTH             : integer
+        SUM_WIDTH : integer
     );
     port (
         clk        : in  std_logic;
