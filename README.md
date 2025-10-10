@@ -5,7 +5,7 @@ University, South Australia. If you wish to use or extend this project, please
 contact myself or -- if you are a student -- contact my supervisors from the
 [College of Science and Engineering](https://www.flinders.edu.au/college-science-engineering).*
 
-**Demodulates and estimates the carrier frequency of ADS-B messages.**
+**Demodulates and estimates the carrier frequency of [ADS-B](https://www.casa.gov.au/operations-safety-and-travel/airspace/automatic-dependent-surveillance-broadcast-ads-b/) messages.**
 
 ## Building the Project
 
