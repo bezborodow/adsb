@@ -20,6 +20,9 @@ def setup_iio(frequency, sampling_frequency):
     subprocess.run(["iio_attr", "-c", "ad9361-phy", "voltage3",
                     "sampling_frequency", str(int(sampling_frequency))])
 
+    subprocess.run(["iio_attr", "-c", "-i", "ad9361-phy", "voltage0",
+                    "hardwaregain"])
+
 
 def read_tty(frequency, sampling_frequency):
     fd = os.open("/dev/ttyPS1", os.O_RDONLY | os.O_NONBLOCK)
@@ -73,23 +76,16 @@ def adsb_decode(line, frequency, sampling_frequency):
     fs = sampling_frequency
 
     msg = line[:-16]
-    print(f'Data received: {msg}')
-    print(f'Downlink Format: DF-{ms.df(msg)}')
-    print(f'ICAO: {ms.icao(msg)}')
 
     # ADS-B is DF 17 or DF 18
     if not ms.df(msg) in [17, 18]:
-        print('Not an ADS-B message.')
-        print()
+        #print('Not an ADS-B message.')
+        #print()
         return
 
-    # Frequency estimation.
-    iq = np.frombuffer(bytes.fromhex(line[-16:]), dtype='>i4')
-    S_hat = float(iq[0]) + 1j*float(iq[1])
-    phi_hat = np.angle(S_hat)
-    f_hat = fs/2/np.pi*phi_hat
-    f_est = int(f_hat + fc)
-    print(f"Frequency estimation: {f_est} Hz")
+    print()
+    print(f'Data received: {msg}')
+    print(f'Downlink Format: DF-{ms.df(msg)}')
 
     tc = ms.adsb.typecode(msg)
     print(f'Type Code: {tc}')
@@ -108,7 +104,15 @@ def adsb_decode(line, frequency, sampling_frequency):
         pass
     elif 19 == tc:
         print(f'Velocity: {ms.adsb.velocity(msg)}')
-    print()
+
+    # Frequency estimation.
+    iq = np.frombuffer(bytes.fromhex(line[-16:]), dtype='>i4')
+    S_hat = float(iq[0]) + 1j*float(iq[1])
+    phi_hat = np.angle(S_hat)
+    f_hat = fs/2/np.pi*phi_hat
+    f_est = int(f_hat + fc)
+    print(f'ICAO: {ms.icao(msg)}')
+    print(f"Frequency estimation: {f_est} Hz")
 
 
 if __name__ == "__main__":
