@@ -1,5 +1,12 @@
 # FPGA ADS-B Demodulator and Frequency Estimator
 
+*This is a research project that was submitted as an Honours Thesis to Flinders
+University, South Australia. If you wish to use or extend this project, please
+contact myself or -- if you are a student -- contact my supervisors from the
+[College of Science and Engineering](https://www.flinders.edu.au/college-science-engineering).*
+
+**Demodulates and estimates the carrier frequency of ADS-B messages.**
+
 ## Building the Project
 
 Checkout [HDL reference design](https://github.com/analogdevicesinc/hdl) in the directory above.
