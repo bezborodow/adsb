@@ -69,12 +69,12 @@ architecture rtl of adsb_preamble_window is
     constant SUM_NOISE_FLOOR_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, TAP_NOISE_FLOOR_LENGTH);
     constant SUM_CARRIER_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, TAP_CARRIER_LENGTH);
     constant SUM_BUFFER_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, PREAMBLE_BUFFER_LENGTH);
-    constant SUM_SYMBOL_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, SAMPLES_PER_PULSEB);
+    constant SUM_PULSEB_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, SAMPLES_PER_PULSEB);
     signal rs_et_sum  : unsigned(SUM_BUFFER_WIDTH-1 downto 0);
-    signal rs_ew0_sum : unsigned(SUM_SYMBOL_WIDTH-1 downto 0);
-    signal rs_ew1_sum : unsigned(SUM_SYMBOL_WIDTH-1 downto 0);
-    signal rs_ew2_sum : unsigned(SUM_SYMBOL_WIDTH-1 downto 0);
-    signal rs_ew3_sum : unsigned(SUM_SYMBOL_WIDTH-1 downto 0);
+    signal rs_ew0_sum : unsigned(SUM_PULSEB_WIDTH-1 downto 0);
+    signal rs_ew1_sum : unsigned(SUM_PULSEB_WIDTH-1 downto 0);
+    signal rs_ew2_sum : unsigned(SUM_PULSEB_WIDTH-1 downto 0);
+    signal rs_ew3_sum : unsigned(SUM_PULSEB_WIDTH-1 downto 0);
     signal rs_enf_sum : unsigned(SUM_NOISE_FLOOR_WIDTH-1 downto 0);
     signal rs_ec0_sum : unsigned(SUM_CARRIER_WIDTH-1 downto 0);
     signal rs_ec1_sum : unsigned(SUM_CARRIER_WIDTH-1 downto 0);
@@ -160,7 +160,7 @@ begin
 
     u_adsb_rolling_sum_ew0 : entity work.adsb_rolling_sum
         generic map (
-            SUM_WIDTH => SUM_SYMBOL_WIDTH
+            SUM_WIDTH => SUM_PULSEB_WIDTH
         )
         port map (
             clk        => clk,
@@ -172,7 +172,7 @@ begin
 
     u_adsb_rolling_sum_ew1 : entity work.adsb_rolling_sum
         generic map (
-            SUM_WIDTH => SUM_SYMBOL_WIDTH
+            SUM_WIDTH => SUM_PULSEB_WIDTH
         )
         port map (
             clk        => clk,
@@ -184,7 +184,7 @@ begin
 
     u_adsb_rolling_sum_ew2 : entity work.adsb_rolling_sum
         generic map (
-            SUM_WIDTH => SUM_SYMBOL_WIDTH
+            SUM_WIDTH => SUM_PULSEB_WIDTH
         )
         port map (
             clk        => clk,
@@ -196,7 +196,7 @@ begin
 
     u_adsb_rolling_sum_ew3 : entity work.adsb_rolling_sum
         generic map (
-            SUM_WIDTH => SUM_SYMBOL_WIDTH
+            SUM_WIDTH => SUM_PULSEB_WIDTH
         )
         port map (
             clk        => clk,
