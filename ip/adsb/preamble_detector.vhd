@@ -6,7 +6,7 @@ use work.adsb_pkg.all;
 
 entity preamble_detector is
     generic (
-        SAMPLES_PER_SYMBOL     : integer;
+        SAMPLES_PER_PULSEB     : integer;
         PREAMBLE_BUFFER_LENGTH : integer
     );
     port (
@@ -75,7 +75,7 @@ begin
     -- Used instead of a correlator; not the same thing, but similar purpose!
     u_windower : entity work.adsb_preamble_window
         generic map (
-            SAMPLES_PER_SYMBOL     => SAMPLES_PER_SYMBOL,
+            SAMPLES_PER_PULSEB     => SAMPLES_PER_PULSEB,
             PREAMBLE_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH
         )
         port map (
@@ -98,7 +98,7 @@ begin
     -- Peak detector.
     u_peak_detector : entity work.adsb_preamble_peak
         generic map (
-            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL
+            SAMPLES_PER_PULSEB => SAMPLES_PER_PULSEB
         )
         port map (
             clk                  => clk,

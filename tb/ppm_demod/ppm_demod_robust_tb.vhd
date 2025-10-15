@@ -21,7 +21,7 @@ architecture test of ppm_demod_robust_tb is
     signal clk : std_logic := '1';
     constant clk_period : time := 50 ns; -- 20 MHz sample rate.
 
-    constant SAMPLES_PER_SYMBOL : positive := 10;
+    constant SAMPLES_PER_PULSEB : positive := 10;
 
     -- UUT (unit under test) signals.
     signal demod_ready : std_logic := '0';
@@ -102,7 +102,7 @@ begin
 
     uut : entity work.ppm_demod
         generic map (
-            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL
+            SAMPLES_PER_PULSEB => SAMPLES_PER_PULSEB
         )
         port map (
             clk => clk,
@@ -167,7 +167,7 @@ begin
         wait until rising_edge(clk);
         
         -- Wait to get in time with the detect strobe.
-        wait for clk_period * SAMPLES_PER_SYMBOL;
+        wait for clk_period * SAMPLES_PER_PULSEB;
         assert demod_malformed = '0' report "Should not be malformed upon startup." severity failure;
 
         -- Send the data.
@@ -194,7 +194,7 @@ begin
             end if;
 
             if send_detect then
-                if counter = SAMPLES_PER_SYMBOL + detect_offset then
+                if counter = SAMPLES_PER_PULSEB + detect_offset then
                     demod_detect <= '1'; 
                 else
                     demod_detect <= '0'; 

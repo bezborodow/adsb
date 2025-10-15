@@ -6,7 +6,7 @@ use work.adsb_pkg.all;
 
 entity adsb_preamble_window is
     generic (
-        SAMPLES_PER_SYMBOL     : positive;
+        SAMPLES_PER_PULSEB     : positive;
         PREAMBLE_BUFFER_LENGTH : integer
     );
     port (
@@ -41,8 +41,8 @@ architecture rtl of adsb_preamble_window is
     signal i_buf_reg, q_buf_reg : iq_buffer_t(0 to PIPELINE_DELAY-1) := (others => (others => '0'));
 
     -- Taps.
-    constant TAP_NOISE_FLOOR_LENGTH : integer := 2 ** integer(floor(log2(real(6*SAMPLES_PER_SYMBOL - 1)))); -- L_M.
-    constant TAP_CARRIER_LENGTH     : integer := 2 ** integer(floor(log2(real(SAMPLES_PER_SYMBOL - 1)))); -- L_C.
+    constant TAP_NOISE_FLOOR_LENGTH : integer := 2 ** integer(floor(log2(real(6*SAMPLES_PER_PULSEB - 1)))); -- L_M.
+    constant TAP_CARRIER_LENGTH     : integer := 2 ** integer(floor(log2(real(SAMPLES_PER_PULSEB - 1)))); -- L_C.
     signal buf_tap_delay  : mag_sq_t;
     signal buf_tap_et_a   : mag_sq_t;
     signal buf_tap_et_b   : mag_sq_t;
@@ -69,7 +69,7 @@ architecture rtl of adsb_preamble_window is
     constant SUM_NOISE_FLOOR_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, TAP_NOISE_FLOOR_LENGTH);
     constant SUM_CARRIER_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, TAP_CARRIER_LENGTH);
     constant SUM_BUFFER_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, PREAMBLE_BUFFER_LENGTH);
-    constant SUM_SYMBOL_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, SAMPLES_PER_SYMBOL);
+    constant SUM_SYMBOL_WIDTH : positive := gen_sum_width(IQ_MAG_SQ_WIDTH, SAMPLES_PER_PULSEB);
     signal rs_et_sum  : unsigned(SUM_BUFFER_WIDTH-1 downto 0);
     signal rs_ew0_sum : unsigned(SUM_SYMBOL_WIDTH-1 downto 0);
     signal rs_ew1_sum : unsigned(SUM_SYMBOL_WIDTH-1 downto 0);
@@ -99,24 +99,24 @@ begin
             TAP_PIPELINE_DELAY     => PREAMBLE_BUFFER_LENGTH - PIPELINE_DELAY + 1,
             TAP_ET_B_POS           => 0,
             TAP_ET_A_POS           => PREAMBLE_BUFFER_LENGTH - 1,
-            TAP_EW0_B_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_SYMBOL,
-            TAP_EW0_A_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_SYMBOL + SAMPLES_PER_SYMBOL - 1,
-            TAP_EW1_B_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_SYMBOL,
-            TAP_EW1_A_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_SYMBOL + SAMPLES_PER_SYMBOL - 1,
-            TAP_EW2_B_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_SYMBOL,
-            TAP_EW2_A_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_SYMBOL + SAMPLES_PER_SYMBOL - 1,
-            TAP_EW3_B_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_SYMBOL,
-            TAP_EW3_A_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_SYMBOL + SAMPLES_PER_SYMBOL - 1,
-            TAP_ENF_B_POS          => 13 * SAMPLES_PER_SYMBOL - TAP_NOISE_FLOOR_LENGTH / 2,
-            TAP_ENF_A_POS          => 13 * SAMPLES_PER_SYMBOL - TAP_NOISE_FLOOR_LENGTH / 2 + TAP_NOISE_FLOOR_LENGTH - 1,
-            TAP_EC0_B_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2,
-            TAP_EC0_A_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1,
-            TAP_EC1_B_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2,
-            TAP_EC1_A_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1,
-            TAP_EC2_B_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2,
-            TAP_EC2_A_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1,
-            TAP_EC3_B_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2,
-            TAP_EC3_A_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_SYMBOL + (SAMPLES_PER_SYMBOL - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1
+            TAP_EW0_B_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_PULSEB,
+            TAP_EW0_A_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_PULSEB + SAMPLES_PER_PULSEB - 1,
+            TAP_EW1_B_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_PULSEB,
+            TAP_EW1_A_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_PULSEB + SAMPLES_PER_PULSEB - 1,
+            TAP_EW2_B_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_PULSEB,
+            TAP_EW2_A_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_PULSEB + SAMPLES_PER_PULSEB - 1,
+            TAP_EW3_B_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_PULSEB,
+            TAP_EW3_A_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_PULSEB + SAMPLES_PER_PULSEB - 1,
+            TAP_ENF_B_POS          => 13 * SAMPLES_PER_PULSEB - TAP_NOISE_FLOOR_LENGTH / 2,
+            TAP_ENF_A_POS          => 13 * SAMPLES_PER_PULSEB - TAP_NOISE_FLOOR_LENGTH / 2 + TAP_NOISE_FLOOR_LENGTH - 1,
+            TAP_EC0_B_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_PULSEB + (SAMPLES_PER_PULSEB - TAP_CARRIER_LENGTH) / 2,
+            TAP_EC0_A_POS          => PREAMBLE_POSITION(0) * SAMPLES_PER_PULSEB + (SAMPLES_PER_PULSEB - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1,
+            TAP_EC1_B_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_PULSEB + (SAMPLES_PER_PULSEB - TAP_CARRIER_LENGTH) / 2,
+            TAP_EC1_A_POS          => PREAMBLE_POSITION(1) * SAMPLES_PER_PULSEB + (SAMPLES_PER_PULSEB - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1,
+            TAP_EC2_B_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_PULSEB + (SAMPLES_PER_PULSEB - TAP_CARRIER_LENGTH) / 2,
+            TAP_EC2_A_POS          => PREAMBLE_POSITION(2) * SAMPLES_PER_PULSEB + (SAMPLES_PER_PULSEB - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1,
+            TAP_EC3_B_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_PULSEB + (SAMPLES_PER_PULSEB - TAP_CARRIER_LENGTH) / 2,
+            TAP_EC3_A_POS          => PREAMBLE_POSITION(3) * SAMPLES_PER_PULSEB + (SAMPLES_PER_PULSEB - TAP_CARRIER_LENGTH) / 2 + TAP_CARRIER_LENGTH - 1
         )
         port map (
             clk          => clk,

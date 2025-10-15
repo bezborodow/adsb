@@ -6,7 +6,7 @@ use work.adsb_pkg.all;
 
 entity adsb_uart is
     generic (
-        SAMPLES_PER_SYMBOL : integer := 30;
+        SAMPLES_PER_PULSEB : integer := 30;
         PREAMBLE_BUFFER_LENGTH : integer := 480;
         ACCUMULATION_LENGTH : integer := 4096;
         UART_CLK_DIV : integer := 521 -- 60_000_000/115200
@@ -76,7 +76,7 @@ architecture rtl of adsb_uart is
 begin
     u_adsb : entity work.adsb
         generic map (
-            SAMPLES_PER_SYMBOL     => SAMPLES_PER_SYMBOL,
+            SAMPLES_PER_PULSEB     => SAMPLES_PER_PULSEB,
             PREAMBLE_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH,
             ACCUMULATION_LENGTH    => ACCUMULATION_LENGTH
         )

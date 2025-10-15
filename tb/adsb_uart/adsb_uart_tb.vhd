@@ -25,7 +25,7 @@ begin
 
     uut : entity work.adsb_uart
         generic map (
-            SAMPLES_PER_SYMBOL     => 10,
+            SAMPLES_PER_PULSEB     => 10,
             PREAMBLE_BUFFER_LENGTH => 160,
             ACCUMULATION_LENGTH    => 1024,
             UART_CLK_DIV           => 4 -- Don't choose a realistic baud rate, because the testbench will take forever.

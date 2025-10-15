@@ -6,7 +6,7 @@ use work.adsb_pkg.all;
 
 entity adsb_preamble_peak is
     generic (
-        SAMPLES_PER_SYMBOL : positive
+        SAMPLES_PER_PULSEB : positive
     );
     port (
         clk : in std_logic;

@@ -64,7 +64,7 @@ begin
 
     uut : entity work.ppm_demod
         generic map (
-            SAMPLES_PER_SYMBOL => 10
+            SAMPLES_PER_PULSEB => 10
         )
         port map (
             clk => clk,

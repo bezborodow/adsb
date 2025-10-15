@@ -29,7 +29,7 @@ begin
 
     uut : entity work.adsb
         generic map (
-            SAMPLES_PER_SYMBOL     => 20,
+            SAMPLES_PER_PULSEB     => 20,
             PREAMBLE_BUFFER_LENGTH => 320,
             ACCUMULATION_LENGTH    => 2048
         )

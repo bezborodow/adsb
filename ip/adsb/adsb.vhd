@@ -6,7 +6,7 @@ use work.adsb_pkg.all;
 
 entity adsb is
     generic (
-        SAMPLES_PER_SYMBOL     : integer;
+        SAMPLES_PER_PULSEB     : integer;
         PREAMBLE_BUFFER_LENGTH : integer;
         ACCUMULATION_LENGTH    : integer
     );
@@ -59,7 +59,7 @@ architecture rtl of adsb is
 begin
     u_detector : entity work.preamble_detector
         generic map (
-            SAMPLES_PER_SYMBOL     => SAMPLES_PER_SYMBOL,
+            SAMPLES_PER_PULSEB     => SAMPLES_PER_PULSEB,
             PREAMBLE_BUFFER_LENGTH => PREAMBLE_BUFFER_LENGTH
         )
         port map (
@@ -102,7 +102,7 @@ begin
     -- PPM demodulator.
     u_demodulator : entity work.ppm_demod
         generic map (
-            SAMPLES_PER_SYMBOL => SAMPLES_PER_SYMBOL
+            SAMPLES_PER_PULSEB => SAMPLES_PER_PULSEB
         )
         port map (
             clk => clk,

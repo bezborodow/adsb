@@ -38,7 +38,7 @@ begin
 
     uut : entity work.preamble_detector
         generic map (
-            SAMPLES_PER_SYMBOL => 10,
+            SAMPLES_PER_PULSEB => 10,
             PREAMBLE_BUFFER_LENGTH => 160
         )
         port map (

@@ -6,7 +6,7 @@ use work.adsb_pkg.all;
 
 entity ppm_demod is
     generic (
-        SAMPLES_PER_SYMBOL : positive -- TODO rename: this is strictly samples per pulse? SPS would be twice this.
+        SAMPLES_PER_PULSEB : positive
     );
     port (
         clk : in std_logic;
@@ -22,7 +22,7 @@ entity ppm_demod is
     );
 end ppm_demod;
 architecture rtl of ppm_demod is
-    constant HALF_SPS : integer := SAMPLES_PER_SYMBOL / 2;
+    constant HALF_SPS : integer := SAMPLES_PER_PULSEB / 2;
 
     -- Track when the demodulator is active.
     signal demodulating : std_logic := '0';
@@ -58,7 +58,7 @@ begin
     -- a sample strobe that is used to trigger a sample read
     -- midway through the symbol.
     timing_process : process(clk)
-        constant EDGE_TIMER_MAX : positive := SAMPLES_PER_SYMBOL-1;
+        constant EDGE_TIMER_MAX : positive := SAMPLES_PER_PULSEB-1;
         variable input_rising : std_logic := '0';
         variable input_falling : std_logic := '0';
         variable edge_timer : natural range 0 to EDGE_TIMER_MAX := 0;
