@@ -51,6 +51,7 @@ cd ~/src/
 git clone git@github.com:analogdevicesinc/wiki-scripts.git
 cd wiki-scripts/
 cd zynq_boot_bin/
+mkdir -p adrv_lvds/
 source /opt/Xilinx/Vivado/2023.2/settings64.sh
 ./build_boot_bin.sh \
     ~/src/adsb/adrv9364z7020_adsb/system_top.xsa \
