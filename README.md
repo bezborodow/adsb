@@ -9,16 +9,30 @@ contact myself or -- if you are a student -- contact my supervisors from the
 
 ## Building the Project
 
-Checkout [HDL reference design](https://github.com/analogdevicesinc/hdl) in the directory above.
+This project is based on the [ADRV9364Z7020 HDL
+Project](https://analogdevicesinc.github.io/hdl/projects/adrv9364z7020/).
+
+First, checkout [HDL reference design](https://github.com/analogdevicesinc/hdl) in the directory above.
 
 ```
-git clone git@github.com:analogdevicesinc/hdl.git ../hdl
-cd adrv9364z7020_adsb/
+cd ~/src/ # Assume a source working directory exists.
+git clone git@github.com:analogdevicesinc/hdl.git
+git checkout 2023_R2_p1
+cd hdl/
+cd projects/adrv9364z7020/
 source /opt/Xilinx/Vivado/2023.2/settings64.sh
 make
 ```
 
-Based on [ADRV9364Z7020 HDL Project](https://analogdevicesinc.github.io/hdl/projects/adrv9364z7020/).
+Then build the ADS-B project.
+
+```
+cd ~/src/
+git clone git@github.com:bezborodow/adsb.git
+cd adsb/
+cd adrv9364z7020_adsb/
+make
+```
 
 ## Building BOOT.BIN
 
@@ -31,9 +45,11 @@ This will export the `system_top.xsa`. Be sure to check 'Include Bitstream'.
 Under wiki-scripts:
 
 ```
+cd ~/src/adsb/
 find . -name system_top.xsa
-git clone git@github.com:analogdevicesinc/wiki-scripts.git ../wiki-scripts/
-cd ../wiki-scripts/
+cd ~/src/
+git clone git@github.com:analogdevicesinc/wiki-scripts.git
+cd wiki-scripts/
 cd zynq_boot_bin/
 source /opt/Xilinx/Vivado/2023.2/settings64.sh
 ./build_boot_bin.sh \
