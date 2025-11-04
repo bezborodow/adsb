@@ -137,7 +137,6 @@ def parse_args(argv):
         print("Missing required option.")
         usage()
 
-    # Convert numerical args to int and validate
     try:
         carrier = int(carrier)
         sampling = int(sampling)
@@ -150,11 +149,6 @@ def parse_args(argv):
 
 
 if __name__ == "__main__":
-    #sampling_frequency = 60_000_000
-    #frequency = 1_089_000_000
-    #bandwidth = 56_000_000 # 56 or 18.
-    #filename = "RECORD004"
-    #main(frequency, sampling_frequency, bandwidth, filename)
     c, s, b, o = parse_args(sys.argv[1:])
     main(c, s, b, o)
 
